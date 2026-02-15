@@ -85,10 +85,3 @@ Comandos de lote do Windows (Batch) para orquestrar a inicialização.
 6.  **Backend** retorna JSON com os resultados.
 7.  **Frontend** recebe o JSON e desenha os cards dos produtos na tela.
 
----
-
-## Próximos Passos Sugeridos para Estudo
-
-1.  **Melhorar a Busca**: Estudar sobre *fuzzy matching* mais avançado ou bibliotecas como `RapidFuzz` no Python.
-2.  **Deploy**: Como colocar essa API em um servidor real (Render, Railway, AWS)?
-3.  **Frameworks JS**: Tentar recriar o frontend usando React ou Vue.js para gerenciar melhor o estado.
