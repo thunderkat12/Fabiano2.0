@@ -30,13 +30,19 @@ def load_data():
     else:
         print(f"Warning: {DATA_FILE} not found. Run extract_data.py first.")
 
+from fastapi.responses import FileResponse
+
 @app.on_event("startup")
 async def startup_event():
     load_data()
 
+@app.get("/info")
+def get_info():
+    return {"message": "Product API is running. Use /search?query=... to search.", "total_products": len(products_cache)}
+
 @app.get("/")
 def read_root():
-    return {"message": "Product API is running. Use /search?query=... to search.", "total_products": len(products_cache)}
+    return FileResponse("index.html")
 
 import difflib
 
