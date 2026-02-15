@@ -50,51 +50,92 @@ import difflib
 
 @app.get("/search")
 def search_products(
-    query: str = Query(..., min_length=2, description="Search term for product name"),
+    query: str = Query(..., min_length=1, description="Search term for product name"),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key")
 ):
     """
-    Search for products by description (case-insensitive) with fuzzy matching.
+    Search for products by description with intelligent synonym-aware ranking.
     """
     if x_api_key:
         print(f"Received request with API Key: {x_api_key[:5]}... (valid)")
     
-    # Clean query: Remove special chars and stopwords
     import re
-    # Remove punctuation
-    cleaned_query = re.sub(r'[^\w\s]', '', query.lower())
     
-    # Common stopwords in Portuguese context
-    stopwords = {'tem', 'temm', 'vc', 'voce', 'gostaria', 'quero', 'preciso', 'de', 'do', 'da', 'o', 'a', 'e', 'um', 'uma', 'por', 'favor', 'preço', 'valor', 'quanto', 'custa'}
+    # Define synonym groups (bidirectional)
+    synonym_map = {
+        'ip': 'iphone',
+        'iphone': 'ip',
+        'sam': 'samsung',
+        'samsung': 'sam',
+        'moto': 'motorola',
+        'motorola': 'moto',
+        'xm': 'xiaomi',
+        'xiaomi': 'xm',
+        'xiao': 'xiaomi'
+    }
     
-    query_terms = [term for term in cleaned_query.split() if term not in stopwords]
+    # Process query
+    raw_query = query.lower().strip()
+    cleaned_query = re.sub(r'[^\w\s]', ' ', raw_query)
+    query_terms = cleaned_query.split()
     
     if not query_terms:
-        # If everything was a stopword, fall back to original query split
-        query_terms = query.lower().split()
+        return {"count": 0, "results": []}
         
-    print(f"Searching for terms: {query_terms}")
-
-    results = []
+    print(f"Original query: '{query}'")
     
-    # 1. Exact/Partial Match (High Priority)
+    scored_results = []
+    
     for product in products_cache:
         desc = product['description'].lower()
-        if all(term in desc for term in query_terms):
-            results.append(product)
-            
-    # 2. Fuzzy Match (if few results) - handles typos like "iphonme"
-    if len(results) < 5:
-        all_descriptions = [p['description'] for p in products_cache]
-        # Find close matches for the full query string
-        # cutoff=0.6 means 60% similarity required
-        matches = difflib.get_close_matches(query.upper(), all_descriptions, n=5, cutoff=0.5)
+        desc_words = re.sub(r'[^\w\s]', ' ', desc).split()
+        score = 0
+        matched_terms = 0
         
-        for match in matches:
-            # Add matched products if not already in results
-            for product in products_cache:
-                if product['description'] == match and product not in results:
-                    results.append(product)
+        for term in query_terms:
+            term_synonym = synonym_map.get(term)
+            term_found = False
+            
+            # 1. Exact Word Match (Highest priority)
+            if term in desc_words or (term_synonym and term_synonym in desc_words):
+                score += 200
+                term_found = True
+            # 2. Starts With Match
+            elif any(word.startswith(term) for word in desc_words) or (term_synonym and any(word.startswith(term_synonym) for word in desc_words)):
+                score += 100
+                term_found = True
+            # 3. Substring Match
+            elif term in desc or (term_synonym and term_synonym in desc):
+                score += 50
+                term_found = True
+                
+            if term_found:
+                matched_terms += 1
+        
+        # Mandatory: Must match ALL query terms (or their synonyms)
+        if matched_terms < len(query_terms):
+            continue
+            
+        # Bonus: Exact start of description
+        if desc.startswith(query_terms[0]):
+            score += 150
+            
+        # Bonus: Exact full phrase match (if multiple terms)
+        if len(query_terms) > 1 and cleaned_query in re.sub(r'[^\w\s]', ' ', desc):
+            score += 300
+            
+        # Penalty: Description length (prefer shorter, more specific matches)
+        score -= len(desc) * 0.1
+        
+        scored_results.append((score, product))
+    
+    # Sort and take top 20
+    scored_results.sort(key=lambda x: x[0], reverse=True)
+    results = [product for score, product in scored_results[:20]]
+    
+    print(f"Found {len(results)} results")
+    if results:
+        print(f"Top result: {results[0]['description']} (score: {scored_results[0][0]})")
 
     return {"count": len(results), "results": results}
 
