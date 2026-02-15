@@ -6,3 +6,4 @@ ngrok.zip
 venv/
 .vscode/
 *.log
+replit_prompt.md
