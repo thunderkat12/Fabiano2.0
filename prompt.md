@@ -201,6 +201,7 @@ uvicorn api:app --reload
 - [ ] Calcular total automaticamente
 - [ ] Persistir carrinho no `localStorage`
 - [ ] Exportar lista de produtos selecionados (PDF/CSV)
+- [ ] Icone do Whatsapp para enviar pedidos separados, como um cupom fiscavel que possa ser editado as informaç~es a serem enviadas, sempre vai enviar os produtos e preço, mas cnpj e descrições do cupom fiscal editavel para adptar para cada cliente do sismtema
 
 #### 🎨 Melhorias de UX/UI
 - [ ] Filtros avançados (faixa de preço, categoria)

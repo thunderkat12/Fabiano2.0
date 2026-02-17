@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerenciador - Busca de Produtos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Outfit', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 p-3 sm:p-4 md:p-6">
+  <main class="max-w-3xl mx-auto">
+    <header class="mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-indigo-700">Gerenciador</h1>
+          <p class="text-sm text-slate-500">Area administrativa para configurar loja, cupom e WhatsApp.</p>
+        </div>
+        <a href="/" class="w-full sm:w-auto px-3 py-2 text-sm bg-white border rounded hover:bg-slate-100 transition text-center min-h-[44px] flex items-center justify-center">Voltar para loja</a>
+      </div>
+    </header>
+
+    <section id="loginPanel" class="bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-3">
+      <h2 class="text-lg font-semibold">Login de admin</h2>
+      <p class="text-xs text-slate-500">Usuario padrao: <b>admin</b> | Senha padrao: <b>157142536</b></p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input id="loginUser" type="text" class="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Usuario" />
+        <input id="loginPassword" type="password" class="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Senha" />
+      </div>
+      <button onclick="loginAdmin()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[44px]">Entrar</button>
+    </section>
+
+    <section id="adminPanel" class="hidden bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4 mt-5">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h2 class="text-lg font-semibold">Configuracoes do sistema</h2>
+        <button onclick="logoutAdmin()" class="text-sm text-red-600 hover:text-red-700 self-start sm:self-auto min-h-[40px]">Sair</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Nome da loja</label>
+          <input id="cfgStoreName" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Subtitulo da loja</label>
+          <input id="cfgStoreTagline" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Endpoint da API (opcional)</label>
+          <input id="cfgApiBaseUrl" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: https://sua-api.onrender.com" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">WhatsApp destino (somente numeros)</label>
+          <input id="cfgWhatsapp" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 5561995651684" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Titulo do cupom</label>
+          <input id="cfgCouponTitle" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Mensagem do cupom</label>
+          <textarea id="cfgCouponMessage" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Endereco</label>
+          <textarea id="cfgCouponAddress" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-slate-500">Rodape do cupom</label>
+          <textarea id="cfgCouponFooter" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <button onclick="saveConfig()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition min-h-[44px]">Salvar configuracoes</button>
+        <button onclick="loadConfig()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Recarregar</button>
+      </div>
+
+      <p class="text-xs text-slate-500">Criador: thunderkat12 | Contato: 61995651684</p>
+    </section>
+
+    <div id="status" class="mt-4 text-sm"></div>
+  </main>
+
+  <script>
+    let adminToken = sessionStorage.getItem('adminToken') || '';
+
+    window.onload = async function () {
+      document.getElementById('loginUser').value = 'admin';
+      renderAuthState();
+      if (adminToken) {
+        await loadConfig();
+      }
+    };
+
+    function setStatus(message, type = 'neutral') {
+      const el = document.getElementById('status');
+      el.className = 'mt-4 text-sm';
+      if (type === 'ok') el.classList.add('text-emerald-700');
+      else if (type === 'error') el.classList.add('text-red-700');
+      else el.classList.add('text-slate-600');
+      el.textContent = message;
+    }
+
+    function renderAuthState() {
+      const logged = Boolean(adminToken);
+      document.getElementById('loginPanel').classList.toggle('hidden', logged);
+      document.getElementById('adminPanel').classList.toggle('hidden', !logged);
+    }
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      };
+    }
+
+    function applyConfigToForm(cfg) {
+      document.getElementById('cfgStoreName').value = cfg.store_name || '';
+      document.getElementById('cfgStoreTagline').value = cfg.store_tagline || '';
+      document.getElementById('cfgApiBaseUrl').value = cfg.api_base_url || '';
+      document.getElementById('cfgWhatsapp').value = cfg.whatsapp_number || '';
+      document.getElementById('cfgCouponTitle').value = cfg.coupon_title || '';
+      document.getElementById('cfgCouponMessage').value = cfg.coupon_message || '';
+      document.getElementById('cfgCouponAddress').value = cfg.coupon_address || '';
+      document.getElementById('cfgCouponFooter').value = cfg.coupon_footer || '';
+    }
+
+    function collectConfigFromForm() {
+      return {
+        store_name: document.getElementById('cfgStoreName').value.trim(),
+        store_tagline: document.getElementById('cfgStoreTagline').value.trim(),
+        api_base_url: document.getElementById('cfgApiBaseUrl').value.trim(),
+        whatsapp_number: document.getElementById('cfgWhatsapp').value.trim(),
+        coupon_title: document.getElementById('cfgCouponTitle').value.trim(),
+        coupon_message: document.getElementById('cfgCouponMessage').value.trim(),
+        coupon_address: document.getElementById('cfgCouponAddress').value.trim(),
+        coupon_footer: document.getElementById('cfgCouponFooter').value.trim(),
+      };
+    }
+
+    async function loginAdmin() {
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      try {
+        const response = await fetch('/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (!response.ok) throw new Error('Credenciais invalidas');
+        const data = await response.json();
+        adminToken = data.token;
+        sessionStorage.setItem('adminToken', adminToken);
+        renderAuthState();
+        await loadConfig();
+        setStatus('Login realizado com sucesso.', 'ok');
+      } catch (error) {
+        setStatus(`Falha no login: ${error.message}`, 'error');
+      }
+    }
+
+    function logoutAdmin() {
+      adminToken = '';
+      sessionStorage.removeItem('adminToken');
+      renderAuthState();
+      setStatus('Sessao encerrada.', 'neutral');
+    }
+
+    async function loadConfig() {
+      if (!adminToken) return;
+      try {
+        const response = await fetch('/admin/config', { headers: authHeaders() });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error('Nao foi possivel carregar configuracoes');
+        const data = await response.json();
+        applyConfigToForm(data);
+        setStatus('Configuracoes carregadas.', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) {
+          logoutAdmin();
+        }
+      }
+    }
+
+    async function saveConfig() {
+      if (!adminToken) return;
+      const payload = collectConfigFromForm();
+      try {
+        const response = await fetch('/admin/config', {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error('Nao foi possivel salvar configuracoes');
+        const data = await response.json();
+        applyConfigToForm(data.config || payload);
+        setStatus('Configuracoes salvas com sucesso.', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) {
+          logoutAdmin();
+        }
+      }
+    }
+  </script>
+</body>
+</html>
