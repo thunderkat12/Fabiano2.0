@@ -24,7 +24,6 @@
 
     <section id="loginPanel" class="bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-3">
       <h2 class="text-lg font-semibold">Login de admin</h2>
-      <p class="text-xs text-slate-500">Usuario padrao: <b>admin</b> | Senha padrao: <b>157142536</b></p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <input id="loginUser" type="text" class="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Usuario" />
         <input id="loginPassword" type="password" class="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Senha" />
@@ -88,7 +87,7 @@
     let adminToken = sessionStorage.getItem('adminToken') || '';
 
     window.onload = async function () {
-      document.getElementById('loginUser').value = 'admin';
+      document.getElementById('loginUser').value = '';
       renderAuthState();
       if (adminToken) {
         await loadConfig();

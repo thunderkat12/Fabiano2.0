@@ -45,6 +45,18 @@ SYNONYM_MAP = {
     "xiao": "xiaomi",
 }
 
+CATEGORY_RULES = [
+    ("Bateria", ("bateria", "battery")),
+    ("Tela", ("display", "tela", "lcd", "touch")),
+    ("Carregador", ("carregador", "charger", "fonte")),
+    ("Cabo e Adaptador", ("cabo", "adaptador", "conector", "otg", "hdmi", "lightning", "type c", "usb")),
+    ("Fone e Audio", ("fone", "earphone", "headset", "audio", "caixa de som", "speaker")),
+    ("Peliculas e Protecao", ("pelicula", "película", "protetor", "vidro", "glass")),
+    ("Capas e Cases", ("capa", "case", "capinha", "bumper")),
+    ("Ferramentas", ("alicate", "chave", "estacao", "estação", "ferro de solda", "solda", "pinça", "pinca")),
+    ("Suportes", ("suporte", "tripé", "tripe", "holder")),
+]
+
 
 def env_text(key: str, default: str = "") -> str:
     return os.getenv(key, default).replace("\\n", "\n").strip()
@@ -145,6 +157,22 @@ def tokenize(value: str) -> list[str]:
     cleaned = re.sub(r"[^\w\s]", " ", value.lower().strip())
     return cleaned.split()
 
+
+def infer_category(description: str) -> str:
+    desc = str(description or "").lower()
+    for category_name, keywords in CATEGORY_RULES:
+        if any(keyword in desc for keyword in keywords):
+            return category_name
+    return "Outros"
+
+
+def code_sort_key(value: Any) -> tuple[int, str]:
+    text = str(value or "").strip()
+    digits = re.sub(r"\D", "", text)
+    if digits:
+        return (0, digits.zfill(12))
+    return (1, text.lower())
+
 @app.on_event("startup")
 async def startup_event():
     load_data()
@@ -175,6 +203,20 @@ def get_order_config():
         "coupon_address": APP_SETTINGS.get("coupon_address", DEFAULT_SETTINGS["coupon_address"]),
         "coupon_footer": APP_SETTINGS.get("coupon_footer", DEFAULT_SETTINGS["coupon_footer"]),
     }
+
+
+@app.get("/categories")
+def get_categories():
+    counts: dict[str, int] = {}
+    for product in products_cache:
+        category = infer_category(product.get("description", ""))
+        counts[category] = counts.get(category, 0) + 1
+
+    categories = [
+        {"name": name, "count": counts[name]}
+        for name in sorted(counts.keys(), key=lambda item: item.lower())
+    ]
+    return {"categories": categories}
 
 
 @app.post("/admin/login")
@@ -225,9 +267,10 @@ def read_manager():
 @app.get("/search")
 def search_products(
     query: str = Query(..., min_length=1, description="Search term for product name"),
+    category: Optional[str] = Query(None, min_length=1, max_length=80, description="Product category"),
     min_price: Optional[float] = Query(None, ge=0, description="Minimum product price (a vista)"),
     max_price: Optional[float] = Query(None, ge=0, description="Maximum product price (a vista)"),
-    sort_by: str = Query("relevance", pattern="^(relevance|price_asc|price_desc|name)$"),
+    sort_by: str = Query("relevance", pattern="^(relevance|price_asc|price_desc|name|code)$"),
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
@@ -256,6 +299,10 @@ def search_products(
         desc = product["description"].lower()
         desc_words = tokenize(desc)
         price = parse_price(product.get("price_sight", "0"))
+        product_category = infer_category(product.get("description", ""))
+
+        if category and product_category.lower() != category.lower():
+            continue
 
         if min_price is not None and price < min_price:
             continue
@@ -300,7 +347,7 @@ def search_products(
         # Penalty: Description length (prefer shorter, more specific matches)
         score -= len(desc) * 0.1
 
-        scored_results.append((score, product))
+        scored_results.append((score, product, product_category))
 
     if sort_by == "price_asc":
         scored_results.sort(key=lambda x: (parse_price(x[1].get("price_sight", "0")), -x[0]))
@@ -308,12 +355,18 @@ def search_products(
         scored_results.sort(key=lambda x: (-parse_price(x[1].get("price_sight", "0")), -x[0]))
     elif sort_by == "name":
         scored_results.sort(key=lambda x: x[1].get("description", "").lower())
+    elif sort_by == "code":
+        scored_results.sort(key=lambda x: code_sort_key(x[1].get("id", "")))
     else:
         scored_results.sort(key=lambda x: x[0], reverse=True)
 
     total = len(scored_results)
     paginated = scored_results[offset : offset + limit]
-    results = [product for score, product in paginated]
+    results: list[dict[str, Any]] = []
+    for score, product, product_category in paginated:
+        item = dict(product)
+        item["category"] = product_category
+        results.append(item)
 
     print(f"Found {len(results)} results")
     if results:

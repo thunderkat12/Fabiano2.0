@@ -195,20 +195,32 @@ uvicorn api:app --reload
 - [ ] Validação de formato de arquivo
 
 #### 🛒 Carrinho de Compras
-- [ ] Adicionar botão "Adicionar ao Carrinho" em cada produto
-- [ ] Implementar seleção múltipla de produtos
-- [ ] Criar componente de carrinho lateral
-- [ ] Calcular total automaticamente
-- [ ] Persistir carrinho no `localStorage`
+- [x] Adicionar botão "Adicionar ao Carrinho" em cada produto
+- [x] Implementar seleção múltipla de produtos
+- [x] Criar componente de carrinho lateral
+- [x] Calcular total automaticamente
+- [x] Persistir carrinho no `localStorage`
 - [ ] Exportar lista de produtos selecionados (PDF/CSV)
-- [ ] Icone do Whatsapp para enviar pedidos separados, como um cupom fiscavel que possa ser editado as informaç~es a serem enviadas, sempre vai enviar os produtos e preço, mas cnpj e descrições do cupom fiscal editavel para adptar para cada cliente do sismtema
+- [x] Ícone do WhatsApp com envio de pedido por itens selecionados e cupom editável (título/mensagem/endereço/rodapé)
+
+**Novas metas (Carrinho - próxima sprint)**
+- [ ] Exportar carrinho selecionado em CSV com subtotal por item
+- [ ] Exportar comprovante em PDF com layout de cupom
+- [ ] Permitir salvar e recuperar rascunhos de pedido
+- [ ] Suportar múltiplos templates de cupom (ex.: por cliente com CNPJ)
 
 #### 🎨 Melhorias de UX/UI
-- [ ] Filtros avançados (faixa de preço, categoria)
-- [ ] Ordenação (preço, nome, código)
-- [ ] Paginação de resultados
-- [ ] Modo escuro (dark mode)
-- [ ] Histórico de buscas recentes
+- [x] Filtros avançados (faixa de preço, categoria)
+- [x] Ordenação (preço, nome, código)
+- [x] Paginação de resultados
+- [x] Modo escuro (dark mode)
+- [x] Histórico de buscas recentes
+
+**Novas metas (UX/UI - próxima sprint)**
+- [ ] Filtro adicional por marca (extraída da descrição)
+- [ ] Botão "limpar busca" no campo principal
+- [ ] Melhorar acessibilidade de teclado (atalhos, foco visível e navegação por Tab)
+- [ ] Exibir skeleton loading para resultados e carrinho
 
 #### 🔐 Autenticação (Opcional)
 - [ ] Sistema de login/cadastro
