@@ -11,7 +11,7 @@ from pathlib import Path
 from threading import Lock
 
 import uvicorn
-from fastapi import FastAPI, Query, Header, HTTPException, UploadFile, File
+from fastapi import FastAPI, Query, Header, HTTPException, UploadFile, File, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -39,8 +39,20 @@ LEGACY_SETTINGS_FILE = LEGACY_STORE_DIR / "settings.json"
 CREATOR_NAME = "thunderkat12"
 CREATOR_WHATSAPP = "61995651684"
 ADMIN_USER = os.getenv("ADMIN_USER", os.getenv("MASTER_USER", "admin")).strip().lower() or "admin"
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", os.getenv("MASTER_PASSWORD", "157142536"))
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", os.getenv("MASTER_PASSWORD", "157142536@da#"))
 ADMIN_TOKEN_TTL_SECONDS = int(os.getenv("ADMIN_TOKEN_TTL_SECONDS", "28800"))
+ADMIN_LOGIN_MAX_ATTEMPTS = max(1, int(os.getenv("ADMIN_LOGIN_MAX_ATTEMPTS", "5")))
+ADMIN_LOGIN_WINDOW_SECONDS = max(60, int(os.getenv("ADMIN_LOGIN_WINDOW_SECONDS", "300")))
+ADMIN_LOGIN_BLOCK_SECONDS = max(60, int(os.getenv("ADMIN_LOGIN_BLOCK_SECONDS", "900")))
+
+DEFAULT_MANAGER_ENTRY_KEY = "Daniel@qwe"
+MANAGER_ENTRY_KEY = os.getenv("MANAGER_ENTRY_KEY", DEFAULT_MANAGER_ENTRY_KEY).strip()
+if "#" in MANAGER_ENTRY_KEY:
+    MANAGER_ENTRY_KEY = MANAGER_ENTRY_KEY.split("#", 1)[0]
+MANAGER_ENTRY_KEY = MANAGER_ENTRY_KEY.strip().strip("/")
+if not MANAGER_ENTRY_KEY:
+    MANAGER_ENTRY_KEY = DEFAULT_MANAGER_ENTRY_KEY
+MANAGER_ENTRY_ROUTE = f"/{MANAGER_ENTRY_KEY}"
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9_.-]{3,40}$")
 
@@ -53,8 +65,10 @@ products_lock = Lock()
 settings_lock = Lock()
 admin_tokens_lock = Lock()
 search_cache_lock = Lock()
+login_attempts_lock = Lock()
 admin_tokens: dict[str, dict[str, Any]] = {}
 search_cache: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
+login_attempts: dict[str, dict[str, float | int]] = {}
 
 SEARCH_CACHE_MAX_SIZE = max(0, int(os.getenv("SEARCH_CACHE_MAX_SIZE", "128")))
 DEFAULT_SEARCH_LIMIT = 10
@@ -305,6 +319,70 @@ def require_admin_session(authorization: Optional[str]) -> dict[str, Any]:
     return dict(payload)
 
 
+def get_request_ip(request: Request) -> str:
+    forwarded = str(request.headers.get("x-forwarded-for", "")).strip()
+    if forwarded:
+        first = forwarded.split(",")[0].strip()
+        if first:
+            return first
+    if request.client and request.client.host:
+        return str(request.client.host).strip()
+    return "unknown"
+
+
+def enforce_login_rate_limit(ip_address: str, now: float) -> None:
+    with login_attempts_lock:
+        current = login_attempts.get(ip_address)
+        if current is None:
+            return
+
+        blocked_until = float(current.get("blocked_until", 0))
+        if blocked_until > now:
+            retry_after = int(blocked_until - now)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Muitas tentativas de login. Tente novamente em {max(1, retry_after)} segundos.",
+            )
+
+        window_start = float(current.get("window_start", now))
+        if now - window_start > ADMIN_LOGIN_WINDOW_SECONDS:
+            login_attempts.pop(ip_address, None)
+
+
+def register_login_failure(ip_address: str, now: float) -> None:
+    with login_attempts_lock:
+        current = login_attempts.get(ip_address)
+        if current is None:
+            login_attempts[ip_address] = {
+                "window_start": now,
+                "count": 1,
+                "blocked_until": 0.0,
+            }
+            return
+
+        window_start = float(current.get("window_start", now))
+        if now - window_start > ADMIN_LOGIN_WINDOW_SECONDS:
+            login_attempts[ip_address] = {
+                "window_start": now,
+                "count": 1,
+                "blocked_until": 0.0,
+            }
+            return
+
+        count = int(current.get("count", 0)) + 1
+        blocked_until = now + ADMIN_LOGIN_BLOCK_SECONDS if count >= ADMIN_LOGIN_MAX_ATTEMPTS else 0.0
+        login_attempts[ip_address] = {
+            "window_start": window_start,
+            "count": count,
+            "blocked_until": blocked_until,
+        }
+
+
+def clear_login_failures(ip_address: str) -> None:
+    with login_attempts_lock:
+        login_attempts.pop(ip_address, None)
+
+
 def parse_price(value: str) -> float:
     try:
         return float(str(value).replace(",", ".").strip())
@@ -396,16 +474,23 @@ def get_categories():
 
 
 @app.post("/admin/login")
-def admin_login(payload: dict[str, Any]):
+def admin_login(payload: dict[str, Any], request: Request):
+    now = time.time()
+    ip_address = get_request_ip(request)
+    enforce_login_rate_limit(ip_address, now)
+
     username = normalize_username(payload.get("username", ""))
     password = str(payload.get("password", ""))
     if not password:
+        register_login_failure(ip_address, now)
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
 
     expected_username = normalize_username(ADMIN_USER)
     if not secrets.compare_digest(username, expected_username) or not secrets.compare_digest(password, ADMIN_PASSWORD):
+        register_login_failure(ip_address, now)
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
 
+    clear_login_failures(ip_address)
     token = issue_admin_token(username=username)
     return {
         "token": token,
@@ -454,7 +539,12 @@ def read_root():
 
 @app.get("/gerenciador")
 def read_manager():
-    return FileResponse("gerenciador.html")
+    raise HTTPException(status_code=404, detail="Pagina nao encontrada")
+
+
+@app.get(MANAGER_ENTRY_ROUTE)
+def read_manager_hidden():
+    return FileResponse("gerenciador.html", headers={"Cache-Control": "no-store"})
 
 
 @app.post("/upload-pdf")

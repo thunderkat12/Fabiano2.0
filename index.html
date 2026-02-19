@@ -86,7 +86,6 @@
       </div>
       <div class="self-end sm:self-auto flex items-center gap-2">
         <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition whitespace-nowrap min-h-[44px]">Modo escuro</button>
-        <a id="managerLink" href="/gerenciador" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition whitespace-nowrap min-h-[44px] flex items-center">Gerenciador</a>
       </div>
     </div>
   </header>
@@ -763,9 +762,27 @@
       document.getElementById('cartSidebar').classList.add('translate-x-full');
     }
 
-    function buildWhatsappMessage(selectedItems, totals, deliveryAddressValue) {
+    function generateOrderProtocol() {
+      const now = new Date();
+      const y = String(now.getFullYear()).slice(-2);
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const randomPart = String(Math.floor(Math.random() * 9000) + 1000);
+      return `${y}${m}${d}${hh}${mm}${randomPart}`;
+    }
+
+    function isLikelyMobileDevice() {
+      const ua = String(navigator.userAgent || '');
+      return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
+    }
+
+    function buildWhatsappMessage(selectedItems, totals, deliveryAddressValue, protocol) {
       const lines = [];
-      lines.push(`*${orderConfig.coupon_title || 'CUPOM DE PEDIDO'}*`);
+      const couponTitle = orderConfig.coupon_title || 'CUPOM DE PEDIDO';
+      lines.push(`*${couponTitle} #${protocol}*`);
+      lines.push(`Protocolo: ${protocol}`);
       if (orderConfig.coupon_message) lines.push(orderConfig.coupon_message);
       if (orderConfig.coupon_address) lines.push(`Endereco: ${orderConfig.coupon_address}`);
       lines.push(`Endereco de entrega: ${deliveryAddressValue}`);
@@ -798,10 +815,15 @@
       localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
       const phone = String(orderConfig.whatsapp_number || '').replace(/\D/g, '');
       if (!phone) return alert('WhatsApp nao configurado no sistema.');
-      const msg = buildWhatsappMessage(selected, totals, deliveryAddressValue);
+      const protocol = generateOrderProtocol();
+      const msg = buildWhatsappMessage(selected, totals, deliveryAddressValue, protocol);
       finalizeOrderAndResetState();
-      setStatus('Pedido enviado. Carrinho e selecoes foram limpos para um novo pedido.', 'ok');
+      setStatus(`Pedido enviado. Protocolo ${protocol}. Carrinho e historico foram limpos para um novo pedido.`, 'ok');
       const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      if (isLikelyMobileDevice()) {
+        window.location.href = waUrl;
+        return;
+      }
       try {
         const popup = window.open(waUrl, '_blank', 'noopener,noreferrer');
         if (!popup) window.location.href = waUrl;
