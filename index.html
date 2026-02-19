@@ -126,7 +126,6 @@
       <select id="pageSize" class="p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
         <option value="5">5 por pagina</option>
         <option value="10" selected>10 por pagina</option>
-        <option value="15">15 por pagina</option>
       </select>
       <button onclick="clearFilters()" class="p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-h-[44px]">Limpar filtros</button>
     </div>
@@ -800,16 +799,15 @@
       const phone = String(orderConfig.whatsapp_number || '').replace(/\D/g, '');
       if (!phone) return alert('WhatsApp nao configurado no sistema.');
       const msg = buildWhatsappMessage(selected, totals, deliveryAddressValue);
-      const baseUrl = `https://wa.me/${phone}`;
-      const popup = window.open(`${baseUrl}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
-      if (!popup) {
-        addWarningLog('Envio WhatsApp bloqueado por popup blocker.');
-        alert('Nao foi possivel abrir o WhatsApp. Verifique se o navegador bloqueou pop-ups.');
-        return;
-      }
-
       finalizeOrderAndResetState();
       setStatus('Pedido enviado. Carrinho e selecoes foram limpos para um novo pedido.', 'ok');
+      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      try {
+        const popup = window.open(waUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) window.location.href = waUrl;
+      } catch (error) {
+        window.location.href = waUrl;
+      }
     }
   </script>
 </body>

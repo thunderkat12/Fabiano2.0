@@ -510,7 +510,7 @@ def search_products(
     min_price: Optional[float] = Query(None, ge=0, description="Minimum product price (a vista)"),
     max_price: Optional[float] = Query(None, ge=0, description="Maximum product price (a vista)"),
     sort_by: str = Query("relevance", pattern="^(relevance|price_asc|price_desc|name|code)$"),
-    limit: int = Query(DEFAULT_SEARCH_LIMIT, ge=1, le=15),
+    limit: int = Query(DEFAULT_SEARCH_LIMIT, ge=1, le=10),
     offset: int = Query(0, ge=0),
     _x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
 ):
