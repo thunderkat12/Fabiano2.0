@@ -187,12 +187,12 @@ uvicorn api:app --reload
 ### 📌 Checklist de Funcionalidades
 
 #### 🔄 Upload de PDF pelo Frontend
-- [ ] Criar endpoint `POST /upload-pdf` para receber arquivo
-- [ ] Processar PDF no backend usando `extract_data.py`
-- [ ] Atualizar `products.json` dinamicamente
-- [ ] Interface de upload com drag-and-drop
-- [ ] Feedback visual de progresso
-- [ ] Validação de formato de arquivo
+- [x] Criar endpoint `POST /upload-pdf` para receber arquivo
+- [x] Processar PDF no backend usando `extract_data.py`
+- [x] Atualizar `products.json` dinamicamente
+- [x] Interface de upload com drag-and-drop
+- [x] Feedback visual de progresso
+- [x] Validação de formato de arquivo
 
 #### 🛒 Carrinho de Compras
 - [x] Adicionar botão "Adicionar ao Carrinho" em cada produto
@@ -223,7 +223,7 @@ uvicorn api:app --reload
 - [ ] Exibir skeleton loading para resultados e carrinho
 
 #### 🔐 Autenticação (Opcional)
-- [ ] Sistema de login/cadastro
+- [x] Login administrativo único por instância (sem multi-loja no mesmo deploy)
 - [ ] Salvar carrinhos por usuário
 - [ ] Histórico de pedidos
 

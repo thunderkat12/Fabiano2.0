@@ -1,0 +1,20 @@
+[
+  {
+    "username": "admin",
+    "role": "master",
+    "store_id": "default",
+    "active": true,
+    "salt": "8fa18a961bd83d55adf0467df1076a5a",
+    "password_hash": "2b1acf0c950b16b05874547e17c01e39489ca6be66e8780f2df872164ac65f5d",
+    "created_at": 1771457831
+  },
+  {
+    "username": "fabiano",
+    "role": "store_admin",
+    "store_id": "loja1",
+    "active": true,
+    "salt": "9f915c2be02fa114a740f3ea3e2e271f",
+    "password_hash": "9b4c8b77da305b67377a446d8edbe3537e31163cb51705223bc3a80adf3ddbc5",
+    "created_at": 1771458244
+  }
+]
