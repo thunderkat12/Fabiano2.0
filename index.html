@@ -86,7 +86,7 @@
       </div>
       <div class="self-end sm:self-auto flex items-center gap-2">
         <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition whitespace-nowrap min-h-[44px]">Modo escuro</button>
-        <a href="/gerenciador" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition whitespace-nowrap min-h-[44px] flex items-center">Gerenciador</a>
+        <a id="managerLink" href="/gerenciador" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition whitespace-nowrap min-h-[44px] flex items-center">Gerenciador</a>
       </div>
     </div>
   </header>
@@ -124,9 +124,9 @@
         <option value="code">Codigo (crescente)</option>
       </select>
       <select id="pageSize" class="p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
-        <option value="20">20 por pagina</option>
-        <option value="50">50 por pagina</option>
-        <option value="100">100 por pagina</option>
+        <option value="5">5 por pagina</option>
+        <option value="10" selected>10 por pagina</option>
+        <option value="15">15 por pagina</option>
       </select>
       <button onclick="clearFilters()" class="p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-h-[44px]">Limpar filtros</button>
     </div>
@@ -194,7 +194,10 @@
     const DELIVERY_ADDRESS_KEY = 'fabiano_delivery_address_v1';
     const SEARCH_HISTORY_KEY = 'fabiano_search_history_v1';
     const THEME_KEY = 'fabiano_theme_v1';
+    const WARNING_LOG_KEY = 'fabiano_warning_logs_v1';
     const MAX_RECENT_SEARCHES = 8;
+    const MAX_WARNING_LOGS = 120;
+    const MAX_CART_ITEMS_SOFT_LIMIT = 300;
     const PUBLIC_CONFIG_DEFAULT = {
       store_name: 'Busca Inteligente de Produtos',
       store_tagline: 'Busca com filtros, paginacao e carrinho persistente.',
@@ -225,6 +228,7 @@
       loadCart();
       loadDeliveryAddress();
       loadRecentSearches();
+      cleanupTemporaryDataAndWarningLogs({ context: 'startup' });
       await loadPublicConfig();
       await loadOrderConfig();
       await loadCategories();
@@ -238,6 +242,22 @@
 
     function getBaseUrl() { return String(orderConfig.api_base_url || '').trim().replace(/\/$/, ''); }
     function buildApiUrl(path) { const baseUrl = getBaseUrl(); return baseUrl ? `${baseUrl}${path}` : path; }
+    function buildApiUrlWithStore(path, params) {
+      const baseUrl = buildApiUrl(path);
+      const url = new URL(baseUrl, window.location.origin);
+
+      if (params instanceof URLSearchParams) {
+        params.forEach((value, key) => url.searchParams.set(key, value));
+      } else if (params && typeof params === 'object') {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === '') return;
+          url.searchParams.set(key, String(value));
+        });
+      }
+
+      if (/^https?:\/\//i.test(baseUrl)) return url.toString();
+      return `${url.pathname}${url.search}`;
+    }
     function toNumber(value) { const n = Number.parseFloat(String(value).replace(',', '.')); return Number.isFinite(n) ? n : 0; }
     function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0); }
     function setStatus(text, type) {
@@ -248,6 +268,96 @@
       else el.classList.add('text-gray-600');
       el.textContent = text;
       el.classList.remove('hidden');
+      if (type === 'error') addWarningLog(`status_error: ${text}`);
+    }
+
+    function readWarningLogs() {
+      try {
+        const raw = localStorage.getItem(WARNING_LOG_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveWarningLogs(logs) {
+      localStorage.setItem(WARNING_LOG_KEY, JSON.stringify(logs));
+    }
+
+    function addWarningLog(message) {
+      const text = String(message || '').trim();
+      if (!text) return;
+      const logs = readWarningLogs();
+      logs.push({ at: new Date().toISOString(), message: text });
+      const normalized = logs.length > MAX_WARNING_LOGS ? logs.slice(-MAX_WARNING_LOGS) : logs;
+      saveWarningLogs(normalized);
+    }
+
+    function cleanupTemporaryDataAndWarningLogs(options = {}) {
+      const config = {
+        context: String(options.context || 'runtime'),
+        resetOrderState: Boolean(options.resetOrderState),
+        keepAddress: options.keepAddress !== false,
+      };
+
+      if (Array.isArray(recentSearches) && recentSearches.length > MAX_RECENT_SEARCHES) {
+        recentSearches = recentSearches.slice(0, MAX_RECENT_SEARCHES);
+        saveRecentSearches();
+      }
+
+      if (Array.isArray(cart) && cart.length > MAX_CART_ITEMS_SOFT_LIMIT) {
+        addWarningLog(`[${config.context}] carrinho excedeu ${MAX_CART_ITEMS_SOFT_LIMIT} itens e foi truncado.`);
+        cart = cart.slice(0, MAX_CART_ITEMS_SOFT_LIMIT);
+        saveCart();
+      }
+
+      const warningLogs = readWarningLogs();
+      if (warningLogs.length > MAX_WARNING_LOGS) {
+        saveWarningLogs(warningLogs.slice(-MAX_WARNING_LOGS));
+      }
+
+      if (config.resetOrderState) {
+        cart = [];
+        saveCart();
+        recentSearches = [];
+        saveRecentSearches();
+        saveWarningLogs([]);
+        localStorage.removeItem(CART_KEY);
+        localStorage.removeItem(SEARCH_HISTORY_KEY);
+        localStorage.removeItem(WARNING_LOG_KEY);
+
+        if (!config.keepAddress) {
+          deliveryAddress = '';
+          localStorage.removeItem(DELIVERY_ADDRESS_KEY);
+        }
+      }
+    }
+
+    function resetStoreViewForNewOrder() {
+      currentOffset = 0;
+      lastTotal = 0;
+      lastQuery = '';
+      const input = document.getElementById('searchInput');
+      const category = document.getElementById('categoryFilter');
+      const sortBy = document.getElementById('sortBy');
+      const pageSize = document.getElementById('pageSize');
+      const resultsArea = document.getElementById('resultsArea');
+      const paginationArea = document.getElementById('paginationArea');
+      if (input) input.value = '';
+      if (category) category.value = '';
+      if (sortBy) sortBy.value = 'relevance';
+      if (pageSize) pageSize.value = '10';
+      if (resultsArea) resultsArea.innerHTML = '<div class="text-center text-gray-400 py-10">Os resultados aparecerao aqui.</div>';
+      if (paginationArea) paginationArea.classList.add('hidden');
+    }
+
+    function finalizeOrderAndResetState() {
+      cleanupTemporaryDataAndWarningLogs({ context: 'order_finalized', resetOrderState: true, keepAddress: true });
+      renderRecentSearches();
+      renderCart();
+      resetStoreViewForNewOrder();
+      closeCart();
     }
 
     function loadTheme() {
@@ -330,7 +440,7 @@
 
     async function loadPublicConfig() {
       try {
-        const response = await fetch('/public-config');
+        const response = await fetch(buildApiUrlWithStore('/public-config'));
         if (!response.ok) throw new Error('Erro ao carregar identidade da loja');
         const data = await response.json();
         publicConfig = { ...PUBLIC_CONFIG_DEFAULT, ...data };
@@ -341,7 +451,7 @@
 
     async function loadOrderConfig() {
       try {
-        const response = await fetch('/order-config');
+        const response = await fetch(buildApiUrlWithStore('/order-config'));
         if (!response.ok) throw new Error('Erro ao carregar configuracoes de pedido');
         const data = await response.json();
         orderConfig = { ...ORDER_CONFIG_DEFAULT, ...data };
@@ -356,7 +466,7 @@
 
       select.innerHTML = '<option value="">Categoria: Todas</option>';
       try {
-        const response = await fetch(buildApiUrl('/categories'));
+        const response = await fetch(buildApiUrlWithStore('/categories'));
         if (!response.ok) throw new Error('Erro ao carregar categorias');
         const data = await response.json();
         const categories = Array.isArray(data.categories) ? data.categories : [];
@@ -379,7 +489,7 @@
     function clearFilters() {
       document.getElementById('categoryFilter').value = '';
       document.getElementById('sortBy').value = 'relevance';
-      document.getElementById('pageSize').value = '20';
+      document.getElementById('pageSize').value = '10';
       if (lastQuery) searchProducts(true);
     }
 
@@ -407,7 +517,7 @@
         const params = new URLSearchParams({ query, sort_by: sortBy, limit: String(limit), offset: String(currentOffset) });
         if (category) params.append('category', category);
 
-        const response = await fetch(`${buildApiUrl('/search')}?${params.toString()}`);
+        const response = await fetch(buildApiUrlWithStore('/search', params));
         if (!response.ok) throw new Error('Erro na busca');
 
         const data = await response.json();
@@ -691,7 +801,15 @@
       if (!phone) return alert('WhatsApp nao configurado no sistema.');
       const msg = buildWhatsappMessage(selected, totals, deliveryAddressValue);
       const baseUrl = `https://wa.me/${phone}`;
-      window.open(`${baseUrl}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+      const popup = window.open(`${baseUrl}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+      if (!popup) {
+        addWarningLog('Envio WhatsApp bloqueado por popup blocker.');
+        alert('Nao foi possivel abrir o WhatsApp. Verifique se o navegador bloqueou pop-ups.');
+        return;
+      }
+
+      finalizeOrderAndResetState();
+      setStatus('Pedido enviado. Carrinho e selecoes foram limpos para um novo pedido.', 'ok');
     }
   </script>
 </body>
