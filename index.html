@@ -6,91 +6,409 @@
   <title>Busca de Produtos - API</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <style>
-    body { font-family: 'Outfit', sans-serif; }
-    .fade-in { animation: fadeIn .35s ease-in-out; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+    :root {
+      --bg: #efebe4;
+      --bg-alt: #f8f5ef;
+      --surface: rgba(255, 255, 255, 0.84);
+      --surface-strong: #ffffff;
+      --text: #141414;
+      --muted: #5f5b55;
+      --border: #d7d1c6;
+      --accent: #c49a2c;
+      --accent-strong: #e0b43f;
+      --accent-deep: #9d7520;
+      --accent-contrast: #171208;
+      --success: #1f7a4d;
+      --danger: #b34535;
+      --shadow: 0 24px 60px rgba(18, 15, 9, 0.14);
+      --focus: 0 0 0 3px rgba(196, 154, 44, 0.28);
+    }
 
     body.dark-mode {
-      background-color: #0f172a;
-      color: #e2e8f0;
+      --bg: #101116;
+      --bg-alt: #181a20;
+      --surface: rgba(20, 22, 29, 0.84);
+      --surface-strong: #151821;
+      --text: #f5efe3;
+      --muted: #c0b8aa;
+      --border: #393d46;
+      --accent: #ddb458;
+      --accent-strong: #f1c86f;
+      --accent-deep: #b98b2f;
+      --accent-contrast: #1e1810;
+      --success: #4bc38a;
+      --danger: #ff8f80;
+      --shadow: 0 26px 72px rgba(0, 0, 0, 0.5);
+      --focus: 0 0 0 3px rgba(221, 180, 88, 0.32);
     }
-    body.dark-mode #mainCard {
-      background-color: #111827;
-      box-shadow: none;
+
+    * {
+      -webkit-tap-highlight-color: transparent;
     }
-    body.dark-mode #storeTagline,
-    body.dark-mode #creatorInfo,
-    body.dark-mode #pageInfo,
-    body.dark-mode .text-gray-500,
-    body.dark-mode .text-gray-400 {
-      color: #94a3b8 !important;
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(900px 500px at 5% -15%, rgba(196, 154, 44, 0.28), transparent 60%),
+        radial-gradient(800px 420px at 95% 110%, rgba(35, 37, 44, 0.2), transparent 65%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
+      padding-bottom: calc(118px + env(safe-area-inset-bottom));
     }
-    body.dark-mode input,
-    body.dark-mode select,
-    body.dark-mode textarea {
-      background-color: #0b1220;
-      border-color: #334155;
-      color: #e2e8f0;
+
+    .fade-in {
+      animation: fadeIn .45s ease-out both;
     }
-    body.dark-mode input::placeholder,
-    body.dark-mode textarea::placeholder {
-      color: #94a3b8;
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    body.dark-mode .bg-white {
-      background-color: #111827 !important;
+
+    #heroHeader {
+      background: linear-gradient(120deg, rgba(21, 23, 28, 0.94), rgba(35, 39, 47, 0.9));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
     }
-    body.dark-mode .bg-gray-50 {
-      background-color: #0f172a !important;
+
+    #mainCard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
     }
-    body.dark-mode .bg-gray-100 {
-      background-color: #1f2937 !important;
-      color: #e2e8f0 !important;
+
+    .brand-kicker {
+      font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 0.4rem;
     }
-    body.dark-mode .border-gray-100,
-    body.dark-mode .border-gray-200 {
-      border-color: #334155 !important;
+
+    #storeName {
+      font-family: 'Space Grotesk', sans-serif;
+      color: #f8f4ec !important;
+      letter-spacing: -0.025em;
+      line-height: 1.05;
+      margin-bottom: 0.35rem;
     }
-    body.dark-mode .text-gray-800,
-    body.dark-mode .text-gray-700 {
-      color: #e2e8f0 !important;
+
+    #heroHeader #storeTagline {
+      color: rgba(248, 244, 236, 0.78) !important;
     }
-    body.dark-mode #themeToggleBtn {
-      background-color: #1e293b;
-      color: #e2e8f0;
+
+    #creatorInfo,
+    #pageInfo,
+    .text-gray-500,
+    .text-gray-400,
+    .text-gray-700 {
+      color: var(--muted) !important;
     }
-    body.dark-mode .recent-chip {
-      background-color: #1f2937;
-      color: #cbd5e1;
+
+    #heroHeader #themeToggleBtn {
+      background: rgba(255, 255, 255, 0.09) !important;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f8f4ec !important;
     }
-    body.dark-mode .recent-chip:hover {
-      background-color: #334155;
+
+    #heroHeader #themeToggleBtn:hover {
+      background: rgba(255, 255, 255, 0.18) !important;
     }
-    body.dark-mode .bg-indigo-50 {
-      background-color: #1e1b4b !important;
+
+    input,
+    select,
+    textarea {
+      background-color: var(--surface-strong) !important;
+      border-color: var(--border) !important;
+      color: var(--text) !important;
+      transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
     }
-    body.dark-mode .text-indigo-700 {
-      color: #c7d2fe !important;
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--muted) !important;
+      opacity: 0.85;
     }
-    body.dark-mode #cartOverlay {
-      background-color: rgba(2, 6, 23, 0.75);
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none !important;
+      border-color: var(--accent) !important;
+      box-shadow: var(--focus) !important;
+    }
+
+    .text-gray-800 {
+      color: var(--text) !important;
+    }
+
+    .bg-white {
+      background-color: var(--surface-strong) !important;
+    }
+
+    .bg-gray-50 {
+      background-color: rgba(255, 255, 255, 0.58) !important;
+    }
+
+    .bg-gray-100 {
+      background-color: rgba(34, 36, 44, 0.08) !important;
+      color: var(--text) !important;
+    }
+
+    .border-gray-100,
+    .border-gray-200 {
+      border-color: var(--border) !important;
+    }
+
+    .text-indigo-500,
+    .text-indigo-600,
+    .text-indigo-700 {
+      color: var(--accent-deep) !important;
+    }
+
+    .bg-indigo-50 {
+      background-color: rgba(196, 154, 44, 0.13) !important;
+    }
+
+    .bg-indigo-600 {
+      background: linear-gradient(130deg, var(--accent-strong), var(--accent)) !important;
+      color: var(--accent-contrast) !important;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 10px 30px rgba(157, 117, 32, 0.3);
+    }
+
+    .hover\:bg-indigo-700:hover {
+      background: linear-gradient(130deg, var(--accent), var(--accent-deep)) !important;
+    }
+
+    .focus\:ring-indigo-300:focus,
+    .focus\:ring-indigo-400:focus {
+      box-shadow: var(--focus) !important;
+    }
+
+    .border-indigo-600 {
+      border-color: var(--accent) !important;
+    }
+
+    #themeToggleBtn,
+    #prevBtn,
+    button[onclick="clearFilters()"] {
+      border: 1px solid var(--border);
+      background: rgba(34, 36, 44, 0.08) !important;
+      color: var(--text) !important;
+    }
+
+    #themeToggleBtn:hover,
+    #prevBtn:hover,
+    button[onclick="clearFilters()"]:hover {
+      background: rgba(34, 36, 44, 0.14) !important;
+    }
+
+    #statusMessage {
+      background: rgba(34, 36, 44, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 12px;
+    }
+
+    #statusMessage.status-ok {
+      color: var(--success);
+      border-color: rgba(31, 122, 77, 0.35);
+      background: rgba(31, 122, 77, 0.09);
+    }
+
+    #statusMessage.status-error {
+      color: var(--danger);
+      border-color: rgba(179, 69, 53, 0.32);
+      background: rgba(179, 69, 53, 0.09);
+    }
+
+    #statusMessage.status-neutral {
+      color: var(--muted);
+    }
+
+    .recent-chip {
+      border: 1px solid var(--border);
+      background: rgba(34, 36, 44, 0.08);
+      color: var(--text);
+    }
+
+    .recent-chip:hover {
+      background: rgba(34, 36, 44, 0.16);
+    }
+
+    .empty-state,
+    .loading-state,
+    .error-state,
+    .result-counter {
+      color: var(--muted);
+    }
+
+    .result-card {
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 26px rgba(10, 9, 8, 0.08);
+    }
+
+    .result-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 30px rgba(10, 9, 8, 0.14);
+    }
+
+    .category-badge {
+      background: rgba(196, 154, 44, 0.13);
+      color: var(--accent-deep);
+      border: 1px solid rgba(196, 154, 44, 0.25);
+    }
+
+    .result-title {
+      color: var(--text);
+    }
+
+    .result-code {
+      color: var(--accent-deep);
+      letter-spacing: 0.04em;
+    }
+
+    .result-meta {
+      color: var(--muted);
+    }
+
+    .result-price {
+      color: var(--success);
+      letter-spacing: -0.02em;
+    }
+
+    #cartToggleBtn {
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    #cartCountBadge {
+      background: rgba(23, 18, 8, 0.92) !important;
+      color: #fff4dc !important;
+      min-width: 1.9rem;
+      text-align: center;
+    }
+
+    #cartOverlay {
+      background-color: rgba(6, 7, 9, 0.58);
+      backdrop-filter: blur(3px);
+    }
+
+    #cartSidebar {
+      background: var(--surface-strong);
+      border-left: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .cart-empty {
+      color: var(--muted);
+    }
+
+    .cart-row {
+      background: rgba(34, 36, 44, 0.04);
+      border-color: var(--border);
+    }
+
+    .cart-code {
+      color: var(--accent-deep);
+      letter-spacing: 0.04em;
+    }
+
+    .cart-title {
+      color: var(--text);
+    }
+
+    .cart-meta {
+      color: var(--muted);
+    }
+
+    .cart-subtotal {
+      color: var(--success);
+    }
+
+    @media (min-width: 640px) {
+      body {
+        padding-bottom: 2rem;
+      }
+
+      #cartToggleBtn {
+        bottom: calc(20px + env(safe-area-inset-bottom));
+      }
+    }
+
+    @media (max-width: 639px) {
+      #heroHeader {
+        padding: 14px;
+        border-radius: 18px;
+      }
+
+      .brand-kicker {
+        font-size: 0.62rem;
+      }
+
+      #storeName {
+        font-size: 2.15rem !important;
+      }
+
+      #mainCard {
+        border-radius: 18px;
+      }
+
+      #cartSidebar {
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: 0;
+        width: 100%;
+        height: min(88vh, 760px);
+        border-left: none;
+        border-top: 1px solid var(--border);
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        transform: translateY(100%);
+      }
+
+      #cartSidebar.translate-x-full {
+        transform: translateY(100%);
+      }
+
+      #cartSidebar:not(.translate-x-full) {
+        transform: translateY(0);
+      }
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center p-3 sm:p-4 md:p-6 pb-24 sm:pb-6">
-  <header class="w-full max-w-5xl mb-6 fade-in">
+<body class="text-gray-800 min-h-screen flex flex-col items-center p-3 sm:p-4 md:p-6 pb-24 sm:pb-6">
+  <header id="heroHeader" class="w-full max-w-5xl mb-5 fade-in">
     <div class="flex flex-col-reverse sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
       <div class="flex-1 text-center sm:text-left">
-        <h1 id="storeName" class="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">Busca Inteligente de Produtos</h1>
-        <p id="storeTagline" class="text-gray-500">Busca com filtros, paginacao e carrinho persistente.</p>
+        <p class="brand-kicker">Catalogo Premium</p>
+        <h1 id="storeName" class="text-3xl md:text-4xl font-bold mb-2">Busca Inteligente de Produtos</h1>
+        <p id="storeTagline">Busca com filtros, paginacao e carrinho persistente.</p>
       </div>
       <div class="self-end sm:self-auto flex items-center gap-2">
-        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition whitespace-nowrap min-h-[44px]">Modo escuro</button>
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="px-3 py-2 text-sm rounded-lg transition whitespace-nowrap min-h-[44px]">Modo escuro</button>
       </div>
     </div>
   </header>
 
-  <main id="mainCard" class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-4 sm:p-5 md:p-8 fade-in" style="animation-delay: .1s;">
+  <main id="mainCard" class="w-full max-w-5xl rounded-2xl p-4 sm:p-5 md:p-8 fade-in" style="animation-delay: .1s;">
     <div id="statusMessage" class="hidden text-center mb-4 text-sm font-semibold"></div>
 
     <div class="mb-6">
@@ -99,7 +417,7 @@
           <input type="text" id="searchInput" class="w-full p-4 pl-12 border border-gray-200 rounded-xl shadow-inner text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition min-h-[48px]" placeholder="Digite o nome do produto..." onkeypress="handleKeyPress(event)" />
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
-        <button onclick="searchProducts(true)" class="w-full sm:w-auto px-5 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-md font-semibold min-h-[48px]">Buscar</button>
+        <button onclick="searchProducts(true)" class="w-full sm:w-auto px-5 py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md font-semibold min-h-[48px]">Buscar</button>
       </div>
 
       <div id="recentSearchesWrap" class="hidden mt-3">
@@ -129,7 +447,7 @@
       <button onclick="clearFilters()" class="p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-h-[44px]">Limpar filtros</button>
     </div>
 
-    <div id="resultsArea" class="space-y-4"><div class="text-center text-gray-400 py-10">Os resultados aparecerao aqui.</div></div>
+    <div id="resultsArea" class="space-y-4"><div class="empty-state text-center py-10">Os resultados aparecerao aqui.</div></div>
 
     <div id="paginationArea" class="hidden mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       <button id="prevBtn" onclick="prevPage()" class="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition disabled:opacity-50 min-h-[44px]">Anterior</button>
@@ -182,8 +500,8 @@
     </div>
   </aside>
 
-  <footer class="mt-8 text-gray-400 text-xs text-center space-y-1">
-    <div>&copy; 2026 Extracao de PDF & API</div>
+  <footer class="mt-8 text-xs text-center space-y-1">
+    <div>&copy; 2026 Fabiano Acessorios</div>
     <div id="creatorInfo">Criado por thunderkat12 | WhatsApp: 61995651684</div>
   </footer>
 
@@ -260,10 +578,10 @@
     function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0); }
     function setStatus(text, type) {
       const el = document.getElementById('statusMessage');
-      el.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-gray-600');
-      if (type === 'ok') el.classList.add('text-green-600');
-      else if (type === 'error') el.classList.add('text-red-600');
-      else el.classList.add('text-gray-600');
+      el.classList.remove('hidden', 'status-ok', 'status-error', 'status-neutral');
+      if (type === 'ok') el.classList.add('status-ok');
+      else if (type === 'error') el.classList.add('status-error');
+      else el.classList.add('status-neutral');
       el.textContent = text;
       el.classList.remove('hidden');
       if (type === 'error') addWarningLog(`status_error: ${text}`);
@@ -346,7 +664,7 @@
       if (category) category.value = '';
       if (sortBy) sortBy.value = 'relevance';
       if (pageSize) pageSize.value = '10';
-      if (resultsArea) resultsArea.innerHTML = '<div class="text-center text-gray-400 py-10">Os resultados aparecerao aqui.</div>';
+      if (resultsArea) resultsArea.innerHTML = '<div class="empty-state text-center py-10">Os resultados aparecerao aqui.</div>';
       if (paginationArea) paginationArea.classList.add('hidden');
     }
 
@@ -420,7 +738,7 @@
       recentSearches.forEach((term) => {
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'recent-chip px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition';
+        chip.className = 'recent-chip px-3 py-1.5 text-xs rounded-full transition';
         chip.textContent = term;
         chip.addEventListener('click', () => {
           document.getElementById('searchInput').value = term;
@@ -508,7 +826,7 @@
       const sortBy = document.getElementById('sortBy').value;
       const limit = parseInt(document.getElementById('pageSize').value, 10);
 
-      resultsArea.innerHTML = '<div class="text-center py-10"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div><p class="mt-2 text-gray-500">Buscando...</p></div>';
+      resultsArea.innerHTML = '<div class="loading-state text-center py-10"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div><p class="mt-2">Buscando...</p></div>';
       paginationArea.classList.add('hidden');
 
       try {
@@ -524,37 +842,37 @@
         resultsArea.innerHTML = '';
 
         if (!data.results || data.results.length === 0) {
-          resultsArea.innerHTML = `<div class="text-center text-gray-500 py-10">Nenhum produto encontrado para "${query}".</div>`;
+          resultsArea.innerHTML = `<div class="empty-state text-center py-10">Nenhum produto encontrado para "${query}".</div>`;
           return;
         }
 
         const countEl = document.createElement('div');
-        countEl.className = 'text-sm text-gray-500 mb-2';
+        countEl.className = 'result-counter text-sm mb-2';
         countEl.textContent = `Exibindo ${data.count} de ${lastTotal} produtos`;
         resultsArea.appendChild(countEl);
 
         data.results.forEach((product, index) => {
           const item = document.createElement('div');
-          item.className = 'bg-white border border-gray-100 p-3 sm:p-4 rounded-lg shadow-sm hover:shadow-md transition flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 fade-in';
+          item.className = 'result-card p-3 sm:p-4 transition flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 fade-in';
           item.style.animationDelay = `${index * 0.04}s`;
 
           const priceValue = toNumber(product.price_sight);
           const categoryBadge = product.category
-            ? `<span class="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">${product.category}</span>`
+            ? `<span class="category-badge inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full">${product.category}</span>`
             : '';
           item.innerHTML = `
             <div>
-              <div class="text-xs text-indigo-500 font-bold mb-1">COD: ${product.id}</div>
-              <h3 class="font-semibold text-gray-800">${product.description}</h3>
-              <div class="text-xs text-gray-400 mt-1">Unidade: ${product.unit}</div>
+              <div class="result-code text-xs font-bold mb-1">COD: ${product.id}</div>
+              <h3 class="result-title font-semibold">${product.description}</h3>
+              <div class="result-meta text-xs mt-1">Unidade: ${product.unit}</div>
               ${categoryBadge}
             </div>
             <div class="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3">
               <div class="text-right">
-                <div class="text-lg font-bold text-green-600">${formatCurrency(priceValue)}</div>
-                <div class="text-xs text-gray-400">A vista</div>
+                <div class="result-price text-lg font-bold">${formatCurrency(priceValue)}</div>
+                <div class="result-meta text-xs">A vista</div>
               </div>
-              <button class="add-cart-btn w-full sm:w-auto px-3 py-2.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-semibold min-h-[42px]">Adicionar ao carrinho</button>
+              <button class="add-cart-btn w-full sm:w-auto px-3 py-2.5 bg-indigo-600 rounded hover:bg-indigo-700 text-sm font-semibold min-h-[42px]">Adicionar ao carrinho</button>
             </div>
           `;
 
@@ -564,7 +882,7 @@
 
         updatePagination(limit);
       } catch (error) {
-        resultsArea.innerHTML = `<div class="text-center text-red-500 py-10">Erro ao buscar: ${error.message}</div>`;
+        resultsArea.innerHTML = `<div class="error-state text-center py-10">Erro ao buscar: ${error.message}</div>`;
       }
     }
 
@@ -711,7 +1029,7 @@
       document.getElementById('summaryAll').textContent = formatCurrency(totals.totalAll);
 
       if (cart.length === 0) {
-        cartItemsEl.innerHTML = '<div class="text-sm text-gray-400">Carrinho vazio.</div>';
+        cartItemsEl.innerHTML = '<div class="cart-empty text-sm">Carrinho vazio.</div>';
         document.getElementById('selectAllCart').checked = false;
         return;
       }
@@ -720,14 +1038,14 @@
       cart.forEach((item) => {
         const subtotal = item.price * item.qty;
         const row = document.createElement('div');
-        row.className = 'border rounded-lg p-3 space-y-2';
+        row.className = 'cart-row border rounded-lg p-3 space-y-2';
         row.innerHTML = `
           <div class="flex items-start gap-2">
             <input type="checkbox" class="mt-1 select-item" ${item.selected ? 'checked' : ''}>
             <div class="flex-1 min-w-0">
-              <div class="text-xs text-indigo-500 font-bold">COD: ${item.id}</div>
-              <div class="text-sm font-semibold text-gray-800 break-words">${item.description}</div>
-              <div class="text-xs text-gray-500">Unidade: ${item.unit} | Unitario: ${formatCurrency(item.price)}</div>
+              <div class="cart-code text-xs font-bold">COD: ${item.id}</div>
+              <div class="cart-title text-sm font-semibold break-words">${item.description}</div>
+              <div class="cart-meta text-xs">Unidade: ${item.unit} | Unitario: ${formatCurrency(item.price)}</div>
             </div>
             <button class="remove-btn text-red-500 hover:text-red-700 font-bold min-h-[36px] min-w-[36px]">X</button>
           </div>
@@ -737,7 +1055,7 @@
               <input type="number" min="1" class="qty-input w-20 p-1.5 border rounded text-center min-h-[36px]" value="${item.qty}">
               <button class="qty-plus px-3 py-1.5 bg-gray-100 rounded min-h-[36px]">+</button>
             </div>
-            <div class="text-sm font-bold text-green-700">${formatCurrency(subtotal)}</div>
+            <div class="cart-subtotal text-sm font-bold">${formatCurrency(subtotal)}</div>
           </div>
         `;
 
