@@ -478,6 +478,21 @@
         class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[72px]"></textarea>
     </div>
 
+    <div class="px-3 sm:px-4 py-3 border-b space-y-2">
+      <div>
+        <label for="paymentMethod" class="block text-xs text-gray-500 mb-1">Forma de pagamento</label>
+        <select id="paymentMethod" class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
+          <option value="pix">PIX</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+      </div>
+      <div id="cashChangeWrap" class="hidden">
+        <label for="cashChangeFor" class="block text-xs text-gray-500 mb-1">Troco para quanto?</label>
+        <input id="cashChangeFor" type="text" placeholder="Ex: 100,00"
+          class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
+      </div>
+    </div>
+
     <div class="px-3 sm:px-4 py-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
       <label class="flex items-center gap-2"><input id="selectAllCart" type="checkbox" class="rounded" onchange="toggleSelectAll(this.checked)">Selecionar todos</label>
       <button onclick="clearCart()" class="text-red-600 hover:text-red-700 font-semibold self-start sm:self-auto min-h-[40px]">Limpar</button>
@@ -488,8 +503,10 @@
     <div class="p-3 sm:p-4 border-t space-y-3">
       <div class="bg-gray-50 border rounded-lg p-3 text-sm space-y-1">
         <div class="flex justify-between"><span>Itens totais</span><span id="summaryItems">0</span></div>
-        <div class="flex justify-between"><span>Total selecionado</span><span id="summarySelected">R$ 0,00</span></div>
-        <div class="flex justify-between font-bold"><span>Total geral</span><span id="summaryAll">R$ 0,00</span></div>
+        <div class="flex justify-between"><span>Total selecionado (produtos)</span><span id="summarySelected">R$ 0,00</span></div>
+        <div class="flex justify-between"><span>Taxa de entrega</span><span id="summaryDeliveryFee">R$ 0,00</span></div>
+        <div class="flex justify-between font-bold"><span>Total do pedido</span><span id="summaryPayable">R$ 0,00</span></div>
+        <div class="flex justify-between"><span>Total geral carrinho</span><span id="summaryAll">R$ 0,00</span></div>
       </div>
       <button onclick="sendWhatsappOrder()" class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-semibold flex items-center justify-center gap-2 min-h-[48px]">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
@@ -508,6 +525,8 @@
   <script>
     const CART_KEY = 'fabiano_cart_v1';
     const DELIVERY_ADDRESS_KEY = 'fabiano_delivery_address_v1';
+    const PAYMENT_METHOD_KEY = 'fabiano_payment_method_v1';
+    const CASH_CHANGE_FOR_KEY = 'fabiano_cash_change_for_v1';
     const SEARCH_HISTORY_KEY = 'fabiano_search_history_v1';
     const THEME_KEY = 'fabiano_theme_v1';
     const WARNING_LOG_KEY = 'fabiano_warning_logs_v1';
@@ -527,12 +546,16 @@
       coupon_message: 'Segue pedido com itens selecionados.',
       coupon_address: '',
       coupon_footer: 'Obrigado pela preferencia.',
+      delivery_fee_amount: '10.00',
+      delivery_fee_regions: 'Ceilandia, Samambaia',
     };
     let currentOffset = 0;
     let lastTotal = 0;
     let lastQuery = '';
     let cart = [];
     let deliveryAddress = '';
+    let paymentMethod = 'pix';
+    let cashChangeFor = '';
     let publicConfig = { ...PUBLIC_CONFIG_DEFAULT };
     let orderConfig = { ...ORDER_CONFIG_DEFAULT };
     let recentSearches = [];
@@ -553,6 +576,11 @@
       renderRecentSearches();
       const deliveryEl = document.getElementById('deliveryAddress');
       if (deliveryEl) deliveryEl.addEventListener('input', handleDeliveryAddressInput);
+      const paymentEl = document.getElementById('paymentMethod');
+      if (paymentEl) paymentEl.addEventListener('change', handlePaymentMethodChange);
+      const changeEl = document.getElementById('cashChangeFor');
+      if (changeEl) changeEl.addEventListener('input', handleCashChangeInput);
+      loadPaymentState();
       renderCart();
     };
 
@@ -576,6 +604,34 @@
     }
     function toNumber(value) { const n = Number.parseFloat(String(value).replace(',', '.')); return Number.isFinite(n) ? n : 0; }
     function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0); }
+    function removeAccents(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+    function normalizeMatchText(value) { return removeAccents(String(value || '').toLowerCase()); }
+    function getDeliveryFeeAmount() {
+      const amount = toNumber(orderConfig.delivery_fee_amount);
+      return amount > 0 ? amount : 0;
+    }
+    function getDeliveryFeeRegions() {
+      const raw = String(orderConfig.delivery_fee_regions || '');
+      return raw
+        .split(/[\n,;]+/)
+        .map((item) => normalizeMatchText(item).trim())
+        .filter(Boolean);
+    }
+    function getDeliveryFeeForAddress(addressValue) {
+      const amount = getDeliveryFeeAmount();
+      if (amount <= 0) return 0;
+      const regions = getDeliveryFeeRegions();
+      if (!regions.length) return amount;
+      const normalizedAddress = normalizeMatchText(addressValue);
+      if (!normalizedAddress) return 0;
+      return regions.some((region) => normalizedAddress.includes(region)) ? amount : 0;
+    }
+    function getOrderSummary(selectedItems, deliveryAddressValue) {
+      const productsTotal = selectedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+      const deliveryFee = productsTotal > 0 ? getDeliveryFeeForAddress(deliveryAddressValue) : 0;
+      const payableTotal = productsTotal + deliveryFee;
+      return { productsTotal, deliveryFee, payableTotal };
+    }
     function setStatus(text, type) {
       const el = document.getElementById('statusMessage');
       el.classList.remove('hidden', 'status-ok', 'status-error', 'status-neutral');
@@ -670,6 +726,15 @@
 
     function finalizeOrderAndResetState() {
       cleanupTemporaryDataAndWarningLogs({ context: 'order_finalized', resetOrderState: true, keepAddress: true });
+      paymentMethod = 'pix';
+      cashChangeFor = '';
+      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
+      localStorage.removeItem(CASH_CHANGE_FOR_KEY);
+      const paymentEl = document.getElementById('paymentMethod');
+      if (paymentEl) paymentEl.value = paymentMethod;
+      const changeEl = document.getElementById('cashChangeFor');
+      if (changeEl) changeEl.value = '';
+      setCashChangeVisibility();
       renderRecentSearches();
       renderCart();
       resetStoreViewForNewOrder();
@@ -948,6 +1013,55 @@
       const field = document.getElementById('deliveryAddress');
       deliveryAddress = field ? field.value.trim() : '';
       localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
+      renderCart();
+    }
+
+    function setCashChangeVisibility() {
+      const wrap = document.getElementById('cashChangeWrap');
+      const input = document.getElementById('cashChangeFor');
+      const isCash = paymentMethod === 'dinheiro';
+      if (wrap) wrap.classList.toggle('hidden', !isCash);
+      if (input) input.disabled = !isCash;
+    }
+
+    function loadPaymentState() {
+      const savedMethod = String(localStorage.getItem(PAYMENT_METHOD_KEY) || 'pix').toLowerCase();
+      paymentMethod = savedMethod === 'dinheiro' ? 'dinheiro' : 'pix';
+      cashChangeFor = String(localStorage.getItem(CASH_CHANGE_FOR_KEY) || '').trim();
+
+      const paymentEl = document.getElementById('paymentMethod');
+      if (paymentEl) paymentEl.value = paymentMethod;
+
+      const changeEl = document.getElementById('cashChangeFor');
+      if (changeEl) changeEl.value = cashChangeFor;
+
+      setCashChangeVisibility();
+    }
+
+    function handlePaymentMethodChange() {
+      const paymentEl = document.getElementById('paymentMethod');
+      paymentMethod = paymentEl && paymentEl.value === 'dinheiro' ? 'dinheiro' : 'pix';
+      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
+
+      if (paymentMethod !== 'dinheiro') {
+        cashChangeFor = '';
+        localStorage.removeItem(CASH_CHANGE_FOR_KEY);
+        const changeEl = document.getElementById('cashChangeFor');
+        if (changeEl) changeEl.value = '';
+      }
+
+      setCashChangeVisibility();
+      renderCart();
+    }
+
+    function handleCashChangeInput() {
+      const changeEl = document.getElementById('cashChangeFor');
+      cashChangeFor = changeEl ? changeEl.value.trim() : '';
+      if (cashChangeFor) {
+        localStorage.setItem(CASH_CHANGE_FOR_KEY, cashChangeFor);
+      } else {
+        localStorage.removeItem(CASH_CHANGE_FOR_KEY);
+      }
     }
 
     function addToCart(product) {
@@ -1023,9 +1137,15 @@
     function renderCart() {
       const cartItemsEl = document.getElementById('cartItems');
       const totals = getTotals();
+      const selectedItems = getSelectedItems();
+      const deliveryEl = document.getElementById('deliveryAddress');
+      const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : deliveryAddress;
+      const orderSummary = getOrderSummary(selectedItems, deliveryAddressValue);
       document.getElementById('cartCountBadge').textContent = String(totals.items);
       document.getElementById('summaryItems').textContent = String(totals.items);
-      document.getElementById('summarySelected').textContent = formatCurrency(totals.totalSelected);
+      document.getElementById('summarySelected').textContent = formatCurrency(orderSummary.productsTotal);
+      document.getElementById('summaryDeliveryFee').textContent = formatCurrency(orderSummary.deliveryFee);
+      document.getElementById('summaryPayable').textContent = formatCurrency(orderSummary.payableTotal);
       document.getElementById('summaryAll').textContent = formatCurrency(totals.totalAll);
 
       if (cart.length === 0) {
@@ -1096,7 +1216,7 @@
       return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
     }
 
-    function buildWhatsappMessage(selectedItems, totals, deliveryAddressValue, protocol) {
+    function buildWhatsappMessage(selectedItems, orderSummary, deliveryAddressValue, protocol, paymentData) {
       const lines = [];
       const couponTitle = orderConfig.coupon_title || 'CUPOM DE PEDIDO';
       lines.push(`*${couponTitle} #${protocol}*`);
@@ -1104,6 +1224,8 @@
       if (orderConfig.coupon_message) lines.push(orderConfig.coupon_message);
       if (orderConfig.coupon_address) lines.push(`Endereco: ${orderConfig.coupon_address}`);
       lines.push(`Endereco de entrega: ${deliveryAddressValue}`);
+      lines.push(`Forma de pagamento: ${paymentData.label}`);
+      if (paymentData.changeForLabel) lines.push(`Troco para: ${paymentData.changeForLabel}`);
       lines.push('');
       lines.push('*Itens selecionados:*');
 
@@ -1113,14 +1235,15 @@
       });
 
       lines.push('');
-      lines.push(`Total selecionado: ${formatCurrency(totals.totalSelected)}`);
+      lines.push(`Total selecionado (produtos): ${formatCurrency(orderSummary.productsTotal)}`);
+      if (orderSummary.deliveryFee > 0) lines.push(`Taxa de entrega: ${formatCurrency(orderSummary.deliveryFee)}`);
+      lines.push(`Total do pedido: ${formatCurrency(orderSummary.payableTotal)}`);
       if (orderConfig.coupon_footer) lines.push(orderConfig.coupon_footer);
       return lines.join('\n');
     }
 
     function sendWhatsappOrder() {
       const selected = getSelectedItems();
-      const totals = getTotals();
       if (selected.length === 0) return alert('Selecione ao menos um item para enviar no WhatsApp.');
       const deliveryEl = document.getElementById('deliveryAddress');
       const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : '';
@@ -1133,10 +1256,48 @@
       localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
       const phone = String(orderConfig.whatsapp_number || '').replace(/\D/g, '');
       if (!phone) return alert('WhatsApp nao configurado no sistema.');
+
+      const paymentEl = document.getElementById('paymentMethod');
+      paymentMethod = paymentEl && paymentEl.value === 'dinheiro' ? 'dinheiro' : 'pix';
+      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
+
+      const orderSummary = getOrderSummary(selected, deliveryAddressValue);
+      const paymentData = {
+        label: paymentMethod === 'dinheiro' ? 'Dinheiro' : 'PIX',
+        changeForLabel: '',
+      };
+
+      if (paymentMethod === 'dinheiro') {
+        const changeEl = document.getElementById('cashChangeFor');
+        const rawChange = changeEl ? changeEl.value.trim() : cashChangeFor;
+        if (!rawChange) {
+          alert('Informe o troco para quanto quando o pagamento for em dinheiro.');
+          if (changeEl) changeEl.focus();
+          return;
+        }
+
+        const changeValue = toNumber(rawChange);
+        if (changeValue <= 0) {
+          alert('Troco invalido. Informe um valor maior que zero.');
+          if (changeEl) changeEl.focus();
+          return;
+        }
+
+        if (changeValue < orderSummary.payableTotal) {
+          alert('O troco deve ser para um valor maior ou igual ao total do pedido.');
+          if (changeEl) changeEl.focus();
+          return;
+        }
+
+        cashChangeFor = rawChange;
+        localStorage.setItem(CASH_CHANGE_FOR_KEY, rawChange);
+        paymentData.changeForLabel = formatCurrency(changeValue);
+      }
+
       const protocol = generateOrderProtocol();
-      const msg = buildWhatsappMessage(selected, totals, deliveryAddressValue, protocol);
+      const msg = buildWhatsappMessage(selected, orderSummary, deliveryAddressValue, protocol, paymentData);
       finalizeOrderAndResetState();
-      setStatus(`Pedido enviado. Protocolo ${protocol}. Carrinho e historico foram limpos para um novo pedido.`, 'ok');
+      setStatus(`Pedido enviado. Protocolo ${protocol}. Total ${formatCurrency(orderSummary.payableTotal)}. Carrinho e historico foram limpos para um novo pedido.`, 'ok');
       const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
       if (isLikelyMobileDevice()) {
         window.location.href = waUrl;

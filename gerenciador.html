@@ -61,6 +61,14 @@
           <label class="text-xs text-slate-500">WhatsApp destino (somente numeros)</label>
           <input id="cfgWhatsapp" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 5561995651684" />
         </div>
+        <div>
+          <label class="text-xs text-slate-500">Taxa de entrega (R$)</label>
+          <input id="cfgDeliveryFeeAmount" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 10.00" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Regioes com taxa (uma por linha)</label>
+          <textarea id="cfgDeliveryFeeRegions" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Ceilandia&#10;Samambaia"></textarea>
+        </div>
         <div class="md:col-span-2">
           <label class="text-xs text-slate-500">Titulo do cupom</label>
           <input id="cfgCouponTitle" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
@@ -380,6 +388,8 @@
       document.getElementById('cfgStoreTagline').value = cfg.store_tagline || '';
       document.getElementById('cfgApiBaseUrl').value = cfg.api_base_url || '';
       document.getElementById('cfgWhatsapp').value = cfg.whatsapp_number || '';
+      document.getElementById('cfgDeliveryFeeAmount').value = cfg.delivery_fee_amount || '0.00';
+      document.getElementById('cfgDeliveryFeeRegions').value = cfg.delivery_fee_regions || '';
       document.getElementById('cfgCouponTitle').value = cfg.coupon_title || '';
       document.getElementById('cfgCouponMessage').value = cfg.coupon_message || '';
       document.getElementById('cfgCouponAddress').value = cfg.coupon_address || '';
@@ -392,6 +402,8 @@
         store_tagline: document.getElementById('cfgStoreTagline').value.trim(),
         api_base_url: document.getElementById('cfgApiBaseUrl').value.trim(),
         whatsapp_number: document.getElementById('cfgWhatsapp').value.trim(),
+        delivery_fee_amount: document.getElementById('cfgDeliveryFeeAmount').value.trim(),
+        delivery_fee_regions: document.getElementById('cfgDeliveryFeeRegions').value.trim(),
         coupon_title: document.getElementById('cfgCouponTitle').value.trim(),
         coupon_message: document.getElementById('cfgCouponMessage').value.trim(),
         coupon_address: document.getElementById('cfgCouponAddress').value.trim(),

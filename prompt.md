@@ -1,276 +1,198 @@
-# 🚀 API de Busca de Produtos - Extração de PDF
+# API de Busca de Produtos - Estado Atual
 
-[![Deploy Status](https://img.shields.io/badge/deploy-live-success)](https://busca-produto.onrender.com)
-[![Python](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green)](https://fastapi.tiangolo.com/)
-
-Aplicação web completa para extração de dados de PDF e busca inteligente de produtos com interface moderna.
-
-🌐 **[Ver aplicação ao vivo](https://busca-produto.onrender.com)**
+Documento de referencia do projeto `Fabiano_Acessorios`.
+Status consolidado em **22/02/2026**.
 
 ---
 
-## 📋 Índice
+## 1) Visao geral
 
-- [Visão Geral](#visão-geral)
-- [Funcionalidades](#funcionalidades)
-- [Arquitetura](#arquitetura)
-- [Deploy em Produção](#deploy-em-produção)
-- [Desenvolvimento Local](#desenvolvimento-local)
-- [Próximas Melhorias](#próximas-melhorias)
-
----
-
-## 🎯 Visão Geral
-
-Este projeto transforma dados de PDFs em uma API REST com interface web, permitindo:
-- Extração automática de produtos de PDFs tabulares
-- Busca inteligente com fuzzy matching (tolerância a erros de digitação)
-- Interface web responsiva e moderna
-- Deploy gratuito em produção
+Aplicacao web para:
+- extrair catalogo de produtos a partir de PDF;
+- expor busca via API FastAPI;
+- oferecer interface de loja (`index.html`);
+- oferecer painel administrativo oculto (`gerenciador.html`) com autenticacao.
 
 ---
 
-## ✨ Funcionalidades
+## 2) Funcionalidades ativas
 
 ### Backend (FastAPI)
-- ✅ **API REST** com endpoints `/search`, `/products`, `/info`
-- ✅ **Busca inteligente** com remoção de stopwords e fuzzy matching
-- ✅ **CORS habilitado** para acesso de qualquer origem
-- ✅ **Documentação automática** em `/docs` (Swagger UI)
-- ✅ **Cache em memória** para performance (5868 produtos)
 
-### Frontend (HTML/CSS/JS)
-- ✅ **Interface moderna** com Tailwind CSS
-- ✅ **Busca em tempo real** com feedback visual
-- ✅ **Auto-detecção de URL** (funciona local e em produção)
-- ✅ **Animações suaves** e design responsivo
-- ✅ **Formatação de preços** em Real (R$)
+- API com endpoints publicos:
+  - `GET /` -> serve `index.html`
+  - `GET /info` -> status e total de produtos
+  - `GET /public-config` -> dados publicos da loja
+  - `GET /order-config` -> configuracoes de pedido/cupom
+  - `GET /categories` -> categorias com contagem
+  - `GET /search` -> busca com ranking e filtros
+  - `GET /products` -> listagem paginada de produtos vendaveis
+- API com endpoints administrativos:
+  - `POST /admin/login`
+  - `GET /admin/me`
+  - `GET /admin/config`
+  - `PUT /admin/config`
+  - `POST /upload-pdf` (requer token Bearer)
+- Painel admin:
+  - `GET /gerenciador` retorna 404 (rota publica bloqueada)
+  - rota real por chave: `/{MANAGER_ENTRY_KEY}` (padrao: `/Daniel@qwe`)
+- CORS habilitado para todas as origens.
+- Cache em memoria:
+  - cache de produtos/index;
+  - cache LRU de busca (`SEARCH_CACHE_MAX_SIZE`, padrao 128).
+- Migracao automatica de legado:
+  - de `data/stores/default/products.json` para `products.json`;
+  - de `data/stores/default/settings.json` para `app_settings.json`.
 
-### Extração de Dados
-- ✅ **Parser de PDF** usando `pdfplumber`
-- ✅ **Limpeza de dados** automática
-- ✅ **Exportação para JSON** estruturado
+### Busca inteligente (`GET /search`)
 
----
+- Tokenizacao e normalizacao de texto.
+- Mapa de sinonimos (ex.: `ip` <-> `iphone`, `sam` <-> `samsung`).
+- Ranking por relevancia com pesos por:
+  - match exato de palavra;
+  - prefixo de palavra;
+  - substring;
+  - inicio da descricao;
+  - frase completa.
+- Filtros:
+  - `category`
+  - `min_price`
+  - `max_price`
+  - `sort_by` (`relevance|price_asc|price_desc|name|code`)
+  - `offset`
+  - `limit` de 1 a 10 (maximo atual).
+- Produtos sem preco (preco <= 0) nao aparecem em busca/listagem publica.
 
-## 🏗️ Arquitetura
+### Seguranca administrativa
 
-```
-┌─────────────────┐
-│   PDF Source    │
-│  (Tabela de     │
-│   Produtos)     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ extract_data.py │  ← Extração com pdfplumber
-│                 │
-│ products.json   │  ← 5868 produtos estruturados
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│    api.py       │  ← FastAPI + Uvicorn
-│  (Backend)      │
-│                 │
-│  Endpoints:     │
-│  GET /          │  → index.html
-│  GET /search    │  → Busca de produtos
-│  GET /info      │  → Status da API
-│  GET /products  │  → Lista paginada
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  index.html     │  ← Frontend (Tailwind + Vanilla JS)
-│  (Frontend)     │
-└─────────────────┘
-```
+- Login com usuario/senha definidos por ambiente.
+- Sessao por token temporario (Bearer), com expiracao.
+- Protecao anti-forca-bruta por IP no login:
+  - limite de tentativas em janela configuravel;
+  - bloqueio temporario apos excesso.
 
----
+### Frontend da loja (`index.html`)
 
-## 🌍 Deploy em Produção
+- Busca com filtros e ordenacao.
+- Paginacao com opcoes 5 ou 10 por pagina.
+- Carrinho com persistencia local.
+- Envio de pedido por WhatsApp:
+  - gera protocolo de pedido;
+  - limpa estado local apos envio;
+  - fallback para mobile (`window.location`) se popup falhar.
+- Tema visual atualizado (claro/escuro) com novo design.
 
-### Plataforma: Render.com (Free Tier)
+### Painel admin (`gerenciador.html`)
 
-#### Arquivos de Configuração
-
-**`Procfile`**
-```
-web: uvicorn api:app --host 0.0.0.0 --port $PORT
-```
-
-**`runtime.txt`**
-```
-python-3.10.12
-```
-
-**`requirements.txt`**
-```
-fastapi
-uvicorn
-pdfplumber
-```
-
-#### Passos do Deploy
-
-1. **Push para GitHub**
-   ```bash
-   git add .
-   git commit -m "Deploy to production"
-   git push origin main
-   ```
-
-2. **Configurar no Render**
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn api:app --host 0.0.0.0 --port $PORT`
-   - Plano: Free
-
-3. **Acessar**
-   - URL: `https://busca-produto.onrender.com`
-
-#### [MODIFY] [api.py](file:///c:/Users/daniel/Desktop/extrair%20pdf/api.py)
-Melhoria radical no algoritmo de busca para suportar sinônimos e ranking inteligente.
-
-**Principais mudanças:**
-- **Dicionário de Sinônimos**: Mapeamento bi-direcional (ip ↔ iphone, sam ↔ samsung, etc.).
-- **Ranking por Relevância**:
-  - Match exato de palavra: +200 pontos.
-  - Início de palavra: +100 pontos.
-  - Substring: +50 pontos.
-  - Início da descrição: +150 pontos extra.
-  - Frase exata: +300 pontos extra.
-- **Filtro Estrito por Termos**: Agora garante que *todos* os termos da busca (ou seus sinônimos) estejam presentes no produto.
-- **Bônus de Especificidade**: Penalidade leve por comprimento da descrição para priorizar nomes mais curtos e diretos.
-
-#### [MODIFY] [index.html](file:///c:/Users/daniel/Desktop/extrair%20pdf/index.html)
-- ✅ Campo de URL da API agora vazio por padrão (auto-detecta o domínio atual)
-- ✅ Teste de conexão usa `/info` em vez de `/`
-- ✅ Funciona tanto localmente quanto no Render sem configuração manual
-- ✅ Bug fix: Busca agora usa URLs relativas corrigindo erro no Render.
+- Login/logout com sessao em `sessionStorage`.
+- Validacao de sessao via `/admin/me`.
+- Edicao de configuracoes da loja/cupom:
+  - nome/subtitulo;
+  - URL base da API;
+  - WhatsApp;
+  - titulo/mensagem/endereco/rodape do cupom.
+- Upload de PDF com:
+  - drag-and-drop;
+  - validacao de extensao/tipo;
+  - barra de progresso;
+  - feedback de erro/sucesso.
 
 ---
 
-## 💻 Desenvolvimento Local
+## 3) Arquitetura simplificada
 
-### Pré-requisitos
+```text
+PDF -> extract_data.py -> products.json -> api.py -> index.html / gerenciador.html
+```
+
+Fluxo de atualizacao de catalogo:
+1. Admin autentica.
+2. Admin envia PDF em `/upload-pdf`.
+3. Backend extrai produtos e substitui `products.json`.
+4. Cache de busca e indice sao invalidados/reconstruidos.
+
+---
+
+## 4) Variaveis de ambiente principais
+
+- `ADMIN_USER` (fallback: `MASTER_USER`, padrao: `admin`)
+- `ADMIN_PASSWORD` (fallback: `MASTER_PASSWORD`, padrao atual em codigo)
+- `ADMIN_TOKEN_TTL_SECONDS` (padrao: `28800`)
+- `ADMIN_LOGIN_MAX_ATTEMPTS` (padrao: `5`)
+- `ADMIN_LOGIN_WINDOW_SECONDS` (padrao: `300`)
+- `ADMIN_LOGIN_BLOCK_SECONDS` (padrao: `900`)
+- `MANAGER_ENTRY_KEY` (padrao: `Daniel@qwe`)
+- `SEARCH_CACHE_MAX_SIZE` (padrao: `128`)
+- `STORE_NAME`, `STORE_TAGLINE`, `API_BASE_URL`
+- `ORDER_WHATSAPP_NUMBER`
+- `ORDER_COUPON_TITLE`, `ORDER_COUPON_MESSAGE`, `ORDER_COUPON_ADDRESS`, `ORDER_COUPON_FOOTER`
+
+Nota: em producao, definir `ADMIN_PASSWORD` por ambiente e nao depender do valor padrao em codigo.
+
+---
+
+## 5) Desenvolvimento local
+
+### Requisitos
 - Python 3.10+
-- pip
+- dependencias de `requirements.txt`
 
-### Instalação
+### Comandos
 
 ```bash
-# Clone o repositório
-git clone https://github.com/thunderkat12/Busca_produto.git
-cd Busca_produto
-
-# Instale as dependências
 pip install -r requirements.txt
-
-# (Opcional) Extraia dados de um novo PDF
-python extract_data.py
-
-# Inicie o servidor
 uvicorn api:app --reload
 ```
 
-### Acessar Localmente
-- Frontend: `http://localhost:8000`
-- API Docs: `http://localhost:8000/docs`
+### Script auxiliar (Windows)
+
+`start_app.bat`:
+- sobe `python api.py` em segundo plano;
+- abre `http://127.0.0.1:8000` no navegador.
 
 ---
 
-## 🔮 Próximas Melhorias
+## 6) Onde paramos (ultimos commits)
 
-### 📌 Checklist de Funcionalidades
+1. `cedab3e` (2026-02-21)  
+   Correcoes de design no frontend e ajuste de configuracao admin.
+2. `d97bf6c` (2026-02-21)  
+   `start_app.bat` abre a aplicacao pela URL local da API, nao mais `file://`.
+3. `e5a5551` (2026-02-18)  
+   Seguranca: rota admin publica removida, rota oculta por chave, rate limit de login.
+4. `17a9c95` (2026-02-18)  
+   Pos-envio WhatsApp limpa estado; limite maximo por pagina fixado em 10.
+5. `725e374` (2026-02-18)  
+   Fluxo admin/upload finalizado e checklist inicial atualizado.
 
-#### 🔄 Upload de PDF pelo Frontend
-- [x] Criar endpoint `POST /upload-pdf` para receber arquivo
-- [x] Processar PDF no backend usando `extract_data.py`
-- [x] Atualizar `products.json` dinamicamente
-- [x] Interface de upload com drag-and-drop
-- [x] Feedback visual de progresso
-- [x] Validação de formato de arquivo
+---
 
-#### 🛒 Carrinho de Compras
-- [x] Adicionar botão "Adicionar ao Carrinho" em cada produto
-- [x] Implementar seleção múltipla de produtos
-- [x] Criar componente de carrinho lateral
-- [x] Calcular total automaticamente
-- [x] Persistir carrinho no `localStorage`
-- [ ] Exportar lista de produtos selecionados (PDF/CSV)
-- [x] Ícone do WhatsApp com envio de pedido por itens selecionados e cupom editável (título/mensagem/endereço/rodapé)
+## 7) Backlog atual (proxima sprint)
 
-**Novas metas (Carrinho - próxima sprint)**
-- [ ] Exportar carrinho selecionado em CSV com subtotal por item
-- [ ] Exportar comprovante em PDF com layout de cupom
-- [ ] Permitir salvar e recuperar rascunhos de pedido
-- [ ] Suportar múltiplos templates de cupom (ex.: por cliente com CNPJ)
+### Carrinho / Pedido
+- [ ] Exportar carrinho em CSV (com subtotal por item)
+- [ ] Exportar comprovante em PDF
+- [ ] Salvar e recuperar rascunhos de pedido
+- [ ] Suportar multiplos templates de cupom
 
-#### 🎨 Melhorias de UX/UI
-- [x] Filtros avançados (faixa de preço, categoria)
-- [x] Ordenação (preço, nome, código)
-- [x] Paginação de resultados
-- [x] Modo escuro (dark mode)
-- [x] Histórico de buscas recentes
+### UX/UI
+- [ ] Filtro adicional por marca
+- [ ] Botao "limpar busca" no campo principal
+- [ ] Melhorar acessibilidade de teclado
+- [ ] Skeleton loading para resultados e carrinho
 
-**Novas metas (UX/UI - próxima sprint)**
-- [ ] Filtro adicional por marca (extraída da descrição)
-- [ ] Botão "limpar busca" no campo principal
-- [ ] Melhorar acessibilidade de teclado (atalhos, foco visível e navegação por Tab)
-- [ ] Exibir skeleton loading para resultados e carrinho
-
-#### 🔐 Autenticação (Opcional)
-- [x] Login administrativo único por instância (sem multi-loja no mesmo deploy)
-- [ ] Salvar carrinhos por usuário
-- [ ] Histórico de pedidos
-
-#### 📊 Analytics
+### Dados e operacao
 - [ ] Dashboard de produtos mais buscados
-- [ ] Estatísticas de uso da API
+- [ ] Estatisticas de uso da API
 - [ ] Logs de erros e performance
 
 ---
 
-## 📚 Tecnologias Utilizadas
+## 8) Nota de manutencao
 
-| Categoria | Tecnologia |
-|-----------|-----------|
-| **Backend** | Python, FastAPI, Uvicorn |
-| **Frontend** | HTML5, Tailwind CSS, Vanilla JavaScript |
-| **Extração** | pdfplumber |
-| **Deploy** | Render.com, Git |
-| **Dados** | JSON |
-
----
-
-## 🤝 Contribuindo
-
-Contribuições são bem-vindas! Para mudanças importantes:
-1. Fork o projeto
-2. Crie uma branch (`git checkout -b feature/NovaFuncionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/NovaFuncionalidade`)
-5. Abra um Pull Request
-
----
-
-## 📄 Licença
-
-Este projeto é de código aberto para fins educacionais.
-
----
-
-## 👤 Autor
-
-**Daniel** - [GitHub](https://github.com/thunderkat12)
-
----
-
-## 🎉 Status do Projeto
-
-✅ **Em Produção** - Totalmente funcional e acessível publicamente
-
-**Última atualização**: Fevereiro 2026
+Este arquivo deve ser atualizado sempre que houver mudanca de:
+- endpoints;
+- autenticacao/admin;
+- fluxo de pedido WhatsApp;
+- limites de busca/paginacao;
+- comandos de startup/deploy.

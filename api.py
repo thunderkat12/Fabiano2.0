@@ -114,6 +114,8 @@ DEFAULT_SETTINGS = {
     "coupon_message": env_text("ORDER_COUPON_MESSAGE", "Segue pedido com itens selecionados."),
     "coupon_address": env_text("ORDER_COUPON_ADDRESS", ""),
     "coupon_footer": env_text("ORDER_COUPON_FOOTER", "Obrigado pela preferencia."),
+    "delivery_fee_amount": env_text("ORDER_DELIVERY_FEE_AMOUNT", "10.00"),
+    "delivery_fee_regions": env_text("ORDER_DELIVERY_FEE_REGIONS", "Ceilandia, Samambaia"),
 }
 ALLOWED_SETTING_KEYS = set(DEFAULT_SETTINGS.keys())
 
@@ -122,6 +124,19 @@ def normalize_setting_value(key: str, value: Any) -> str:
     text = str(value).replace("\r\n", "\n").strip()
     if key == "api_base_url":
         return text.rstrip("/")
+    if key == "delivery_fee_amount":
+        if not text:
+            return "0.00"
+        normalized = text.replace(",", ".")
+        try:
+            amount = float(normalized)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="delivery_fee_amount invalido") from exc
+        if amount < 0:
+            raise HTTPException(status_code=400, detail="delivery_fee_amount nao pode ser negativo")
+        return f"{amount:.2f}"
+    if key == "delivery_fee_regions":
+        return "\n".join([line.strip() for line in text.split("\n") if line.strip()])
     return text
 
 
@@ -455,6 +470,8 @@ def get_order_config():
         "coupon_message": settings.get("coupon_message", DEFAULT_SETTINGS["coupon_message"]),
         "coupon_address": settings.get("coupon_address", DEFAULT_SETTINGS["coupon_address"]),
         "coupon_footer": settings.get("coupon_footer", DEFAULT_SETTINGS["coupon_footer"]),
+        "delivery_fee_amount": settings.get("delivery_fee_amount", DEFAULT_SETTINGS["delivery_fee_amount"]),
+        "delivery_fee_regions": settings.get("delivery_fee_regions", DEFAULT_SETTINGS["delivery_fee_regions"]),
     }
 
 
