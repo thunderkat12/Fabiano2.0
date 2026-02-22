@@ -61,13 +61,15 @@
           <label class="text-xs text-slate-500">WhatsApp destino (somente numeros)</label>
           <input id="cfgWhatsapp" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 5561995651684" />
         </div>
-        <div>
-          <label class="text-xs text-slate-500">Taxa de entrega (R$)</label>
-          <input id="cfgDeliveryFeeAmount" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 10.00" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-500">Regioes com taxa (uma por linha)</label>
-          <textarea id="cfgDeliveryFeeRegions" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Ceilandia&#10;Samambaia"></textarea>
+        <div class="md:col-span-2 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-xs text-slate-500">Taxas de entrega por regiao</label>
+            <button type="button" onclick="addDeliveryFeeRuleRow()" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[36px]">
+              + Adicionar regiao
+            </button>
+          </div>
+          <div id="cfgDeliveryFeeRulesList" class="space-y-2"></div>
+          <p class="text-[11px] text-slate-500">Exemplo: Ceilandia R$ 10,00 | Guara R$ 20,00</p>
         </div>
         <div class="md:col-span-2">
           <label class="text-xs text-slate-500">Titulo do cupom</label>
@@ -383,13 +385,139 @@
       }
     }
 
+    function parseFeeValue(value) {
+      const n = Number.parseFloat(String(value || '').replace(',', '.'));
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    }
+
+    function formatFeeValue(value) {
+      return parseFeeValue(value).toFixed(2);
+    }
+
+    function parseDeliveryFeeRulesText(text) {
+      const rows = [];
+      const seen = new Set();
+      const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+      lines.forEach((rawLine) => {
+        const line = String(rawLine || '').trim();
+        if (!line) return;
+        const match = line.match(/^(.*?)\s*(?:\||=|:)\s*(\d+(?:[.,]\d{1,2})?)$/);
+        if (!match) return;
+        const region = String(match[1] || '').trim();
+        const fee = formatFeeValue(match[2]);
+        if (!region) return;
+        const key = region.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({ region, fee });
+      });
+      return rows;
+    }
+
+    function parseLegacyDeliveryFeeRows(cfg) {
+      const amount = formatFeeValue(cfg.delivery_fee_amount || '0');
+      const rawRegions = String(cfg.delivery_fee_regions || '');
+      const regions = rawRegions
+        .split(/[\n,;]+/)
+        .map((item) => String(item || '').trim())
+        .filter(Boolean);
+      const unique = [];
+      const seen = new Set();
+      regions.forEach((region) => {
+        const key = region.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        unique.push({ region, fee: amount });
+      });
+      return unique;
+    }
+
+    function buildDeliveryFeeRuleRow(region = '', fee = '0.00') {
+      const safeRegion = String(region || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const safeFee = String(fee || '0.00')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const row = document.createElement('div');
+      row.className = 'delivery-fee-rule-row grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2';
+      row.innerHTML = `
+        <input type="text" class="delivery-region w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Regiao (ex: Ceilandia)" value="${safeRegion}">
+        <input type="text" class="delivery-fee w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Taxa (ex: 10.00)" value="${safeFee}">
+        <button type="button" class="remove-delivery-fee-row px-3 py-2 text-sm text-red-600 border rounded hover:bg-red-50 min-h-[44px]">Remover</button>
+      `;
+      const removeBtn = row.querySelector('.remove-delivery-fee-row');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          row.remove();
+          ensureAtLeastOneDeliveryFeeRuleRow();
+        });
+      }
+      return row;
+    }
+
+    function getDeliveryFeeRulesListEl() {
+      return document.getElementById('cfgDeliveryFeeRulesList');
+    }
+
+    function ensureAtLeastOneDeliveryFeeRuleRow() {
+      const list = getDeliveryFeeRulesListEl();
+      if (!list) return;
+      if (list.children.length > 0) return;
+      list.appendChild(buildDeliveryFeeRuleRow('', '0.00'));
+    }
+
+    function renderDeliveryFeeRuleRows(rows) {
+      const list = getDeliveryFeeRulesListEl();
+      if (!list) return;
+      list.innerHTML = '';
+      rows.forEach((entry) => {
+        list.appendChild(buildDeliveryFeeRuleRow(entry.region, entry.fee));
+      });
+      ensureAtLeastOneDeliveryFeeRuleRow();
+    }
+
+    function addDeliveryFeeRuleRow() {
+      const list = getDeliveryFeeRulesListEl();
+      if (!list) return;
+      list.appendChild(buildDeliveryFeeRuleRow('', '0.00'));
+    }
+
+    function collectDeliveryFeeRuleRows() {
+      const list = getDeliveryFeeRulesListEl();
+      if (!list) return [];
+      const rows = [];
+      const seen = new Set();
+      list.querySelectorAll('.delivery-fee-rule-row').forEach((row) => {
+        const regionInput = row.querySelector('.delivery-region');
+        const feeInput = row.querySelector('.delivery-fee');
+        const region = String(regionInput ? regionInput.value : '').trim();
+        if (!region) return;
+        const fee = formatFeeValue(feeInput ? feeInput.value : '0');
+        const key = region.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({ region, fee });
+      });
+      return rows;
+    }
+
+    function serializeDeliveryFeeRules(rows) {
+      return rows.map((entry) => `${entry.region}=${formatFeeValue(entry.fee)}`).join('\n');
+    }
+
     function applyConfigToForm(cfg) {
       document.getElementById('cfgStoreName').value = cfg.store_name || '';
       document.getElementById('cfgStoreTagline').value = cfg.store_tagline || '';
       document.getElementById('cfgApiBaseUrl').value = cfg.api_base_url || '';
       document.getElementById('cfgWhatsapp').value = cfg.whatsapp_number || '';
-      document.getElementById('cfgDeliveryFeeAmount').value = cfg.delivery_fee_amount || '0.00';
-      document.getElementById('cfgDeliveryFeeRegions').value = cfg.delivery_fee_regions || '';
+      const parsedRules = parseDeliveryFeeRulesText(cfg.delivery_fee_rules || '');
+      const fallbackRules = parseLegacyDeliveryFeeRows(cfg);
+      renderDeliveryFeeRuleRows(parsedRules.length ? parsedRules : fallbackRules);
       document.getElementById('cfgCouponTitle').value = cfg.coupon_title || '';
       document.getElementById('cfgCouponMessage').value = cfg.coupon_message || '';
       document.getElementById('cfgCouponAddress').value = cfg.coupon_address || '';
@@ -397,13 +525,18 @@
     }
 
     function collectConfigFromForm() {
+      const deliveryRows = collectDeliveryFeeRuleRows();
+      const rulesText = serializeDeliveryFeeRules(deliveryRows);
+      const legacyAmount = deliveryRows.length ? formatFeeValue(deliveryRows[0].fee) : '0.00';
+      const legacyRegions = deliveryRows.map((item) => item.region).join('\n');
       return {
         store_name: document.getElementById('cfgStoreName').value.trim(),
         store_tagline: document.getElementById('cfgStoreTagline').value.trim(),
         api_base_url: document.getElementById('cfgApiBaseUrl').value.trim(),
         whatsapp_number: document.getElementById('cfgWhatsapp').value.trim(),
-        delivery_fee_amount: document.getElementById('cfgDeliveryFeeAmount').value.trim(),
-        delivery_fee_regions: document.getElementById('cfgDeliveryFeeRegions').value.trim(),
+        delivery_fee_amount: legacyAmount,
+        delivery_fee_regions: legacyRegions,
+        delivery_fee_rules: rulesText,
         coupon_title: document.getElementById('cfgCouponTitle').value.trim(),
         coupon_message: document.getElementById('cfgCouponMessage').value.trim(),
         coupon_address: document.getElementById('cfgCouponAddress').value.trim(),

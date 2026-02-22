@@ -105,6 +105,79 @@ def env_text(key: str, default: str = "") -> str:
     return os.getenv(key, default).replace("\\n", "\n").strip()
 
 
+DELIVERY_RULE_LINE_RE = re.compile(r"^(?P<region>.+?)\s*(?:\||=|:)\s*(?P<fee>\d+(?:[.,]\d{1,2})?)$")
+
+
+def parse_delivery_fee_rules(text: str) -> list[tuple[str, float]]:
+    rules_by_region: dict[str, tuple[str, float]] = {}
+    for raw_line in str(text or "").replace("\r\n", "\n").split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        match = DELIVERY_RULE_LINE_RE.match(line)
+        if not match:
+            raise HTTPException(
+                status_code=400,
+                detail=f"delivery_fee_rules invalido na linha: '{line}'. Use formato 'Regiao=10.00'.",
+            )
+
+        region = match.group("region").strip()
+        fee_raw = match.group("fee").replace(",", ".")
+        try:
+            fee_value = float(fee_raw)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"delivery_fee_rules invalido na linha: '{line}'.",
+            ) from exc
+
+        if fee_value < 0:
+            raise HTTPException(status_code=400, detail="delivery_fee_rules nao pode conter taxa negativa")
+
+        normalized_key = region.lower()
+        rules_by_region[normalized_key] = (region, fee_value)
+
+    return list(rules_by_region.values())
+
+
+def format_delivery_fee_rules(rules: list[tuple[str, float]]) -> str:
+    return "\n".join([f"{region}={fee:.2f}" for region, fee in rules if str(region).strip()])
+
+
+def build_delivery_fee_rules_from_legacy(amount_text: Any, regions_text: Any) -> str:
+    amount_raw = str(amount_text or "0").replace(",", ".").strip()
+    try:
+        amount = float(amount_raw) if amount_raw else 0.0
+    except ValueError:
+        amount = 0.0
+    amount = max(0.0, amount)
+
+    regions = [part.strip() for part in re.split(r"[\n,;]+", str(regions_text or "")) if part.strip()]
+    if not regions:
+        return ""
+    return format_delivery_fee_rules([(region, amount) for region in regions])
+
+
+def build_default_delivery_fee_rules() -> str:
+    explicit = env_text("ORDER_DELIVERY_FEE_RULES", "")
+    if explicit:
+        return format_delivery_fee_rules(parse_delivery_fee_rules(explicit))
+
+    fallback_amount_raw = env_text("ORDER_DELIVERY_FEE_AMOUNT", "10.00").replace(",", ".")
+    try:
+        fallback_amount = float(fallback_amount_raw)
+    except ValueError:
+        fallback_amount = 10.0
+    fallback_amount = max(0.0, fallback_amount)
+
+    regions_raw = env_text("ORDER_DELIVERY_FEE_REGIONS", "Ceilandia, Samambaia")
+    regions = [part.strip() for part in re.split(r"[\n,;]+", regions_raw) if part.strip()]
+    if not regions:
+        regions = ["Ceilandia", "Samambaia"]
+    return format_delivery_fee_rules([(region, fallback_amount) for region in regions])
+
+
 DEFAULT_SETTINGS = {
     "store_name": os.getenv("STORE_NAME", "Busca Inteligente de Produtos"),
     "store_tagline": os.getenv("STORE_TAGLINE", "Busca com filtros, paginacao e carrinho persistente."),
@@ -116,6 +189,7 @@ DEFAULT_SETTINGS = {
     "coupon_footer": env_text("ORDER_COUPON_FOOTER", "Obrigado pela preferencia."),
     "delivery_fee_amount": env_text("ORDER_DELIVERY_FEE_AMOUNT", "10.00"),
     "delivery_fee_regions": env_text("ORDER_DELIVERY_FEE_REGIONS", "Ceilandia, Samambaia"),
+    "delivery_fee_rules": build_default_delivery_fee_rules(),
 }
 ALLOWED_SETTING_KEYS = set(DEFAULT_SETTINGS.keys())
 
@@ -137,6 +211,10 @@ def normalize_setting_value(key: str, value: Any) -> str:
         return f"{amount:.2f}"
     if key == "delivery_fee_regions":
         return "\n".join([line.strip() for line in text.split("\n") if line.strip()])
+    if key == "delivery_fee_rules":
+        if not text:
+            return ""
+        return format_delivery_fee_rules(parse_delivery_fee_rules(text))
     return text
 
 
@@ -162,9 +240,21 @@ def load_settings_from_disk() -> dict[str, str]:
             loaded = {}
 
     merged = dict(DEFAULT_SETTINGS)
+    has_non_empty_rules_in_loaded = False
     for key in ALLOWED_SETTING_KEYS:
         if key in loaded:
-            merged[key] = normalize_setting_value(key, loaded[key])
+            normalized = normalize_setting_value(key, loaded[key])
+            merged[key] = normalized
+            if key == "delivery_fee_rules" and str(normalized).strip():
+                has_non_empty_rules_in_loaded = True
+
+    if not has_non_empty_rules_in_loaded:
+        legacy_rules = build_delivery_fee_rules_from_legacy(
+            loaded.get("delivery_fee_amount", merged.get("delivery_fee_amount", "0.00")),
+            loaded.get("delivery_fee_regions", merged.get("delivery_fee_regions", "")),
+        )
+        if legacy_rules:
+            merged["delivery_fee_rules"] = legacy_rules
     return merged
 
 
@@ -463,6 +553,12 @@ def get_public_config():
 @app.get("/order-config")
 def get_order_config():
     settings = get_settings()
+    delivery_fee_rules = settings.get("delivery_fee_rules", DEFAULT_SETTINGS["delivery_fee_rules"])
+    if not str(delivery_fee_rules).strip():
+        delivery_fee_rules = build_delivery_fee_rules_from_legacy(
+            settings.get("delivery_fee_amount", DEFAULT_SETTINGS["delivery_fee_amount"]),
+            settings.get("delivery_fee_regions", DEFAULT_SETTINGS["delivery_fee_regions"]),
+        )
     return {
         "api_base_url": settings.get("api_base_url", ""),
         "whatsapp_number": settings.get("whatsapp_number", ""),
@@ -472,6 +568,7 @@ def get_order_config():
         "coupon_footer": settings.get("coupon_footer", DEFAULT_SETTINGS["coupon_footer"]),
         "delivery_fee_amount": settings.get("delivery_fee_amount", DEFAULT_SETTINGS["delivery_fee_amount"]),
         "delivery_fee_regions": settings.get("delivery_fee_regions", DEFAULT_SETTINGS["delivery_fee_regions"]),
+        "delivery_fee_rules": str(delivery_fee_rules),
     }
 
 
@@ -551,7 +648,7 @@ def admin_update_config(payload: dict[str, Any], authorization: Optional[str] = 
 
 @app.get("/")
 def read_root():
-    return FileResponse("index.html")
+    return FileResponse("index.html", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/gerenciador")

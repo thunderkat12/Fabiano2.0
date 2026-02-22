@@ -8,5 +8,6 @@
   "coupon_address": "",
   "coupon_footer": "Obrigado pela preferencia.",
   "delivery_fee_amount": "10.00",
-  "delivery_fee_regions": "Ceilandia, Samambaia, guara, guará, taguatinga,"
+  "delivery_fee_regions": "Ceilandia, Samambaia, guara, guará, taguatinga,",
+  "delivery_fee_rules": "Ceilandia=10.00\nSamambaia=10.00\nGuara=20.00"
 }

@@ -472,10 +472,18 @@
       <button onclick="closeCart()" class="text-gray-500 hover:text-gray-800 text-2xl min-h-[44px] min-w-[44px]">&times;</button>
     </div>
 
-    <div class="px-3 sm:px-4 py-3 border-b">
-      <label for="deliveryAddress" class="block text-xs text-gray-500 mb-1">Endereco de entrega do cliente</label>
-      <textarea id="deliveryAddress" rows="2" placeholder="Ex: Rua X, 123, Bairro, Cidade - UF"
-        class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[72px]"></textarea>
+    <div class="px-3 sm:px-4 py-3 border-b space-y-2">
+      <div>
+        <label for="deliveryRegion" class="block text-xs text-gray-500 mb-1">Regiao da entrega</label>
+        <select id="deliveryRegion" class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
+          <option value="">Selecione a regiao</option>
+        </select>
+      </div>
+      <div>
+        <label for="deliveryAddress" class="block text-xs text-gray-500 mb-1">Endereco/complemento (opcional)</label>
+        <textarea id="deliveryAddress" rows="2" placeholder="Ex: Rua X, 123, Bloco A, Apto 12"
+          class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[72px]"></textarea>
+      </div>
     </div>
 
     <div class="px-3 sm:px-4 py-3 border-b space-y-2">
@@ -525,6 +533,7 @@
   <script>
     const CART_KEY = 'fabiano_cart_v1';
     const DELIVERY_ADDRESS_KEY = 'fabiano_delivery_address_v1';
+    const DELIVERY_REGION_KEY = 'fabiano_delivery_region_v1';
     const PAYMENT_METHOD_KEY = 'fabiano_payment_method_v1';
     const CASH_CHANGE_FOR_KEY = 'fabiano_cash_change_for_v1';
     const SEARCH_HISTORY_KEY = 'fabiano_search_history_v1';
@@ -548,12 +557,14 @@
       coupon_footer: 'Obrigado pela preferencia.',
       delivery_fee_amount: '10.00',
       delivery_fee_regions: 'Ceilandia, Samambaia',
+      delivery_fee_rules: 'Ceilandia=10.00\nSamambaia=10.00\nGuara=20.00',
     };
     let currentOffset = 0;
     let lastTotal = 0;
     let lastQuery = '';
     let cart = [];
     let deliveryAddress = '';
+    let deliveryRegion = '';
     let paymentMethod = 'pix';
     let cashChangeFor = '';
     let publicConfig = { ...PUBLIC_CONFIG_DEFAULT };
@@ -566,6 +577,7 @@
       applyTheme();
       loadCart();
       loadDeliveryAddress();
+      loadDeliveryRegion();
       loadRecentSearches();
       cleanupTemporaryDataAndWarningLogs({ context: 'startup' });
       await loadPublicConfig();
@@ -576,6 +588,8 @@
       renderRecentSearches();
       const deliveryEl = document.getElementById('deliveryAddress');
       if (deliveryEl) deliveryEl.addEventListener('input', handleDeliveryAddressInput);
+      const regionEl = document.getElementById('deliveryRegion');
+      if (regionEl) regionEl.addEventListener('change', handleDeliveryRegionChange);
       const paymentEl = document.getElementById('paymentMethod');
       if (paymentEl) paymentEl.addEventListener('change', handlePaymentMethodChange);
       const changeEl = document.getElementById('cashChangeFor');
@@ -610,6 +624,24 @@
       const amount = toNumber(orderConfig.delivery_fee_amount);
       return amount > 0 ? amount : 0;
     }
+    function parseDeliveryFeeRuleEntries() {
+      const entriesByKey = new Map();
+      const rawText = String(orderConfig.delivery_fee_rules || '').replace(/\r\n/g, '\n');
+      rawText.split('\n')
+        .map((line) => String(line || '').trim())
+        .filter(Boolean)
+        .forEach((line) => {
+          const match = line.match(/^(.*?)\s*(?:\||=|:)\s*(\d+(?:[.,]\d{1,2})?)$/);
+          if (!match) return;
+          const label = String(match[1] || '').trim();
+          if (!label) return;
+          const value = normalizeMatchText(label);
+          if (!value) return;
+          const fee = Math.max(0, toNumber(match[2]));
+          entriesByKey.set(value, { value, label, fee });
+        });
+      return Array.from(entriesByKey.values());
+    }
     function getDeliveryFeeRegions() {
       const raw = String(orderConfig.delivery_fee_regions || '');
       return raw
@@ -617,18 +649,89 @@
         .map((item) => normalizeMatchText(item).trim())
         .filter(Boolean);
     }
-    function getDeliveryFeeForAddress(addressValue) {
+    function getDeliveryFeeRegionOptions() {
+      const parsedRules = parseDeliveryFeeRuleEntries();
+      if (parsedRules.length) return parsedRules;
+
+      const raw = String(orderConfig.delivery_fee_regions || '');
+      const options = [];
+      const seen = new Set();
+      const fallbackFee = getDeliveryFeeAmount();
+      raw.split(/[\n,;]+/)
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+        .forEach((label) => {
+          const value = normalizeMatchText(label);
+          if (!value || seen.has(value)) return;
+          seen.add(value);
+          options.push({ value, label, fee: fallbackFee });
+        });
+      return options;
+    }
+    function getDeliveryRegionLabel(regionValue) {
+      const normalized = normalizeMatchText(regionValue);
+      if (!normalized) return '';
+      const found = getDeliveryFeeRegionOptions().find((item) => item.value === normalized);
+      return found ? found.label : String(regionValue || '').trim();
+    }
+    function renderDeliveryRegionOptions() {
+      const select = document.getElementById('deliveryRegion');
+      if (!select) return;
+
+      const options = getDeliveryFeeRegionOptions();
+      select.innerHTML = '';
+
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = options.length ? 'Selecione a regiao' : 'Regiao nao configurada';
+      select.appendChild(placeholder);
+
+      options.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        const fee = toNumber(item.fee);
+        opt.textContent = fee > 0 ? `${item.label} (${formatCurrency(fee)})` : item.label;
+        select.appendChild(opt);
+      });
+
+      const normalized = normalizeMatchText(deliveryRegion);
+      if (normalized && options.some((item) => item.value === normalized)) {
+        select.value = normalized;
+        deliveryRegion = normalized;
+        return;
+      }
+
+      deliveryRegion = '';
+      select.value = '';
+      localStorage.removeItem(DELIVERY_REGION_KEY);
+    }
+    function getDeliveryFeeForOrder(regionValue, addressValue) {
+      const rules = parseDeliveryFeeRuleEntries();
+      if (rules.length) {
+        const normalizedRegion = normalizeMatchText(regionValue);
+        if (normalizedRegion) {
+          const matchedRegion = rules.find((item) => item.value === normalizedRegion);
+          return matchedRegion ? toNumber(matchedRegion.fee) : 0;
+        }
+        const normalizedAddress = normalizeMatchText(addressValue);
+        if (!normalizedAddress) return 0;
+        const matchedByAddress = rules.find((item) => normalizedAddress.includes(item.value));
+        return matchedByAddress ? toNumber(matchedByAddress.fee) : 0;
+      }
+
       const amount = getDeliveryFeeAmount();
       if (amount <= 0) return 0;
       const regions = getDeliveryFeeRegions();
       if (!regions.length) return amount;
+      const normalizedRegion = normalizeMatchText(regionValue);
+      if (normalizedRegion && regions.includes(normalizedRegion)) return amount;
       const normalizedAddress = normalizeMatchText(addressValue);
       if (!normalizedAddress) return 0;
       return regions.some((region) => normalizedAddress.includes(region)) ? amount : 0;
     }
-    function getOrderSummary(selectedItems, deliveryAddressValue) {
+    function getOrderSummary(selectedItems, deliveryRegionValue, deliveryAddressValue) {
       const productsTotal = selectedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-      const deliveryFee = productsTotal > 0 ? getDeliveryFeeForAddress(deliveryAddressValue) : 0;
+      const deliveryFee = productsTotal > 0 ? getDeliveryFeeForOrder(deliveryRegionValue, deliveryAddressValue) : 0;
       const payableTotal = productsTotal + deliveryFee;
       return { productsTotal, deliveryFee, payableTotal };
     }
@@ -701,7 +804,9 @@
 
         if (!config.keepAddress) {
           deliveryAddress = '';
+          deliveryRegion = '';
           localStorage.removeItem(DELIVERY_ADDRESS_KEY);
+          localStorage.removeItem(DELIVERY_REGION_KEY);
         }
       }
     }
@@ -839,6 +944,8 @@
       } catch (error) {
         orderConfig = { ...ORDER_CONFIG_DEFAULT };
       }
+      renderDeliveryRegionOptions();
+      renderCart();
     }
 
     async function loadCategories() {
@@ -1009,10 +1116,28 @@
       if (field) field.value = saved;
     }
 
+    function loadDeliveryRegion() {
+      const saved = String(localStorage.getItem(DELIVERY_REGION_KEY) || '').trim();
+      deliveryRegion = normalizeMatchText(saved);
+      const field = document.getElementById('deliveryRegion');
+      if (field && deliveryRegion) field.value = deliveryRegion;
+    }
+
     function handleDeliveryAddressInput() {
       const field = document.getElementById('deliveryAddress');
       deliveryAddress = field ? field.value.trim() : '';
       localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
+      renderCart();
+    }
+
+    function handleDeliveryRegionChange() {
+      const field = document.getElementById('deliveryRegion');
+      deliveryRegion = field ? normalizeMatchText(field.value) : '';
+      if (deliveryRegion) {
+        localStorage.setItem(DELIVERY_REGION_KEY, deliveryRegion);
+      } else {
+        localStorage.removeItem(DELIVERY_REGION_KEY);
+      }
       renderCart();
     }
 
@@ -1138,9 +1263,11 @@
       const cartItemsEl = document.getElementById('cartItems');
       const totals = getTotals();
       const selectedItems = getSelectedItems();
+      const regionEl = document.getElementById('deliveryRegion');
+      const deliveryRegionValue = regionEl ? normalizeMatchText(regionEl.value) : deliveryRegion;
       const deliveryEl = document.getElementById('deliveryAddress');
       const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : deliveryAddress;
-      const orderSummary = getOrderSummary(selectedItems, deliveryAddressValue);
+      const orderSummary = getOrderSummary(selectedItems, deliveryRegionValue, deliveryAddressValue);
       document.getElementById('cartCountBadge').textContent = String(totals.items);
       document.getElementById('summaryItems').textContent = String(totals.items);
       document.getElementById('summarySelected').textContent = formatCurrency(orderSummary.productsTotal);
@@ -1216,14 +1343,15 @@
       return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
     }
 
-    function buildWhatsappMessage(selectedItems, orderSummary, deliveryAddressValue, protocol, paymentData) {
+    function buildWhatsappMessage(selectedItems, orderSummary, deliveryRegionLabel, deliveryAddressValue, protocol, paymentData) {
       const lines = [];
       const couponTitle = orderConfig.coupon_title || 'CUPOM DE PEDIDO';
       lines.push(`*${couponTitle} #${protocol}*`);
       lines.push(`Protocolo: ${protocol}`);
       if (orderConfig.coupon_message) lines.push(orderConfig.coupon_message);
       if (orderConfig.coupon_address) lines.push(`Endereco: ${orderConfig.coupon_address}`);
-      lines.push(`Endereco de entrega: ${deliveryAddressValue}`);
+      if (deliveryRegionLabel) lines.push(`Regiao de entrega: ${deliveryRegionLabel}`);
+      if (deliveryAddressValue) lines.push(`Endereco de entrega: ${deliveryAddressValue}`);
       lines.push(`Forma de pagamento: ${paymentData.label}`);
       if (paymentData.changeForLabel) lines.push(`Troco para: ${paymentData.changeForLabel}`);
       lines.push('');
@@ -1245,13 +1373,23 @@
     function sendWhatsappOrder() {
       const selected = getSelectedItems();
       if (selected.length === 0) return alert('Selecione ao menos um item para enviar no WhatsApp.');
-      const deliveryEl = document.getElementById('deliveryAddress');
-      const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : '';
-      if (!deliveryAddressValue) {
-        alert('Informe o endereco de entrega antes de enviar o pedido.');
-        if (deliveryEl) deliveryEl.focus();
+      const regionEl = document.getElementById('deliveryRegion');
+      const deliveryRegionValue = regionEl ? normalizeMatchText(regionEl.value) : deliveryRegion;
+      const deliveryRegionLabel = getDeliveryRegionLabel(deliveryRegionValue);
+      const regionsConfigured = getDeliveryFeeRegionOptions().length > 0;
+      if (regionsConfigured && !deliveryRegionValue) {
+        alert('Selecione a regiao da entrega.');
+        if (regionEl) regionEl.focus();
         return;
       }
+      deliveryRegion = deliveryRegionValue;
+      if (deliveryRegion) {
+        localStorage.setItem(DELIVERY_REGION_KEY, deliveryRegion);
+      } else {
+        localStorage.removeItem(DELIVERY_REGION_KEY);
+      }
+      const deliveryEl = document.getElementById('deliveryAddress');
+      const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : '';
       deliveryAddress = deliveryAddressValue;
       localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
       const phone = String(orderConfig.whatsapp_number || '').replace(/\D/g, '');
@@ -1261,7 +1399,7 @@
       paymentMethod = paymentEl && paymentEl.value === 'dinheiro' ? 'dinheiro' : 'pix';
       localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
 
-      const orderSummary = getOrderSummary(selected, deliveryAddressValue);
+      const orderSummary = getOrderSummary(selected, deliveryRegionValue, deliveryAddressValue);
       const paymentData = {
         label: paymentMethod === 'dinheiro' ? 'Dinheiro' : 'PIX',
         changeForLabel: '',
@@ -1295,7 +1433,7 @@
       }
 
       const protocol = generateOrderProtocol();
-      const msg = buildWhatsappMessage(selected, orderSummary, deliveryAddressValue, protocol, paymentData);
+      const msg = buildWhatsappMessage(selected, orderSummary, deliveryRegionLabel, deliveryAddressValue, protocol, paymentData);
       finalizeOrderAndResetState();
       setStatus(`Pedido enviado. Protocolo ${protocol}. Total ${formatCurrency(orderSummary.payableTotal)}. Carrinho e historico foram limpos para um novo pedido.`, 'ok');
       const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
