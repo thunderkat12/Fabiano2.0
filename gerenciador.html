@@ -318,6 +318,77 @@
       return `Falha no upload (HTTP ${xhr.status || 0}).`;
     }
 
+    function progressForUploadStatus(status) {
+      const normalized = String(status || '').toLowerCase();
+      if (normalized === 'queued') return 93;
+      if (normalized === 'processing') return 96;
+      if (normalized === 'completed') return 100;
+      return 0;
+    }
+
+    async function fetchUploadJobStatus(jobId) {
+      const response = await fetch(`/upload-pdf/status/${encodeURIComponent(jobId)}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        cache: 'no-store',
+      });
+      if (response.status === 401) {
+        const error = new Error('Sessao expirada. Faca login novamente.');
+        error.isFatal = true;
+        throw error;
+      }
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = {};
+      }
+
+      if (!response.ok) {
+        const detail = data && typeof data.detail === 'string' ? data.detail.trim() : '';
+        const error = new Error(detail || `Falha ao consultar processamento (HTTP ${response.status}).`);
+        error.isFatal = response.status >= 400 && response.status < 500;
+        throw error;
+      }
+      return data || {};
+    }
+
+    async function waitForUploadJob(jobId) {
+      const deadline = Date.now() + 8 * 60 * 1000;
+      let transientFailures = 0;
+
+      while (Date.now() < deadline) {
+        try {
+          const statusData = await fetchUploadJobStatus(jobId);
+          transientFailures = 0;
+
+          const status = String(statusData.status || '').toLowerCase();
+          const message = String(statusData.message || 'Processando PDF no servidor...');
+
+          if (status === 'completed') {
+            return statusData;
+          }
+          if (status === 'failed') {
+            const detail = String(statusData.error || message || 'Falha ao processar PDF.').trim();
+            const error = new Error(detail || 'Falha ao processar PDF.');
+            error.isFatal = true;
+            throw error;
+          }
+
+          setUploadProgress(progressForUploadStatus(status), message);
+        } catch (error) {
+          if (error && error.isFatal) throw error;
+          transientFailures += 1;
+          if (transientFailures >= 4) throw error;
+          setUploadProgress(95, 'Conexao oscilando. Tentando confirmar processamento...');
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+
+      throw new Error('Tempo de processamento excedido. Tente novamente em instantes.');
+    }
+
     async function uploadSelectedPdf() {
       if (uploadInFlight) return;
       if (!adminToken) {
@@ -337,7 +408,7 @@
       formData.append('file', selectedPdfFile, selectedPdfFile.name);
 
       try {
-        const response = await new Promise((resolve, reject) => {
+        let response = await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('POST', '/upload-pdf');
           xhr.setRequestHeader('Authorization', `Bearer ${adminToken}`);
@@ -366,6 +437,11 @@
           xhr.onloadstart = () => setUploadProgress(3, 'Enviando arquivo...');
           xhr.send(formData);
         });
+
+        if (response && response.job_id) {
+          setUploadProgress(93, 'Upload concluido. Processando PDF no servidor...');
+          response = await waitForUploadJob(response.job_id);
+        }
 
         setUploadProgress(100, 'Concluido: produtos atualizados com sucesso.');
         const totalProducts = Number(response.total_products || 0);

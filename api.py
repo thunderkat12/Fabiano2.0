@@ -8,11 +8,10 @@ import secrets
 import tempfile
 import time
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 
 import uvicorn
 from fastapi import FastAPI, Query, Header, HTTPException, UploadFile, File, Request
-from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -66,12 +65,18 @@ settings_lock = Lock()
 admin_tokens_lock = Lock()
 search_cache_lock = Lock()
 login_attempts_lock = Lock()
+pdf_jobs_lock = Lock()
 admin_tokens: dict[str, dict[str, Any]] = {}
 search_cache: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
 login_attempts: dict[str, dict[str, float | int]] = {}
+pdf_jobs: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
 SEARCH_CACHE_MAX_SIZE = max(0, int(os.getenv("SEARCH_CACHE_MAX_SIZE", "128")))
 DEFAULT_SEARCH_LIMIT = 10
+PDF_UPLOAD_MAX_BYTES = max(1024 * 1024, int(os.getenv("PDF_UPLOAD_MAX_BYTES", str(25 * 1024 * 1024))))
+PDF_UPLOAD_CHUNK_SIZE = max(64 * 1024, int(os.getenv("PDF_UPLOAD_CHUNK_SIZE", str(1024 * 1024))))
+PDF_JOB_RETENTION_SECONDS = max(300, int(os.getenv("PDF_JOB_RETENTION_SECONDS", "3600")))
+PDF_JOB_MAX_ENTRIES = max(10, int(os.getenv("PDF_JOB_MAX_ENTRIES", "50")))
 
 NON_WORD_PATTERN = re.compile(r"[^\w\s]")
 DIGITS_PATTERN = re.compile(r"\D")
@@ -523,6 +528,105 @@ def code_sort_key(value: Any) -> tuple[int, str]:
     return (1, text.lower())
 
 
+def max_pdf_upload_size_label() -> str:
+    size_mb = PDF_UPLOAD_MAX_BYTES / (1024 * 1024)
+    if float(size_mb).is_integer():
+        return f"{int(size_mb)}MB"
+    return f"{size_mb:.1f}MB"
+
+
+def purge_pdf_jobs(now: float) -> None:
+    stale_job_ids: list[str] = []
+    for job_id, job_data in list(pdf_jobs.items()):
+        status = str(job_data.get("status", ""))
+        if status not in {"completed", "failed"}:
+            continue
+        updated_at = float(job_data.get("updated_at", job_data.get("created_at", now)))
+        if now - updated_at >= PDF_JOB_RETENTION_SECONDS:
+            stale_job_ids.append(job_id)
+
+    for job_id in stale_job_ids:
+        pdf_jobs.pop(job_id, None)
+
+
+def set_pdf_job_state(job_id: str, **updates: Any) -> None:
+    with pdf_jobs_lock:
+        current = pdf_jobs.get(job_id)
+        if current is None:
+            return
+        current.update(updates)
+        current["updated_at"] = time.time()
+        purge_pdf_jobs(time.time())
+
+
+def create_pdf_job(filename: str, file_size: int) -> dict[str, Any]:
+    job_id = secrets.token_urlsafe(12)
+    now = time.time()
+    payload: dict[str, Any] = {
+        "job_id": job_id,
+        "status": "queued",
+        "message": "Upload recebido. Processamento em fila.",
+        "filename": filename,
+        "file_size": int(file_size),
+        "created_at": now,
+        "updated_at": now,
+        "total_products": 0,
+        "total_pages": 0,
+        "error": "",
+    }
+    with pdf_jobs_lock:
+        purge_pdf_jobs(now)
+        pdf_jobs[job_id] = payload
+        while len(pdf_jobs) > PDF_JOB_MAX_ENTRIES:
+            oldest_id, oldest_job = next(iter(pdf_jobs.items()))
+            oldest_status = str(oldest_job.get("status", ""))
+            if oldest_status in {"queued", "processing"}:
+                break
+            pdf_jobs.pop(oldest_id, None)
+    return dict(payload)
+
+
+def get_pdf_job(job_id: str) -> Optional[dict[str, Any]]:
+    with pdf_jobs_lock:
+        purge_pdf_jobs(time.time())
+        payload = pdf_jobs.get(job_id)
+        if payload is None:
+            return None
+        return dict(payload)
+
+
+def process_pdf_job(job_id: str, temp_path: str) -> None:
+    set_pdf_job_state(job_id, status="processing", message="Processando PDF no servidor...")
+    try:
+        products, total_pages = extract_products_from_pdf(temp_path)
+        if not products:
+            raise ValueError("Nenhum produto valido foi encontrado no PDF")
+
+        replace_products(products)
+        set_pdf_job_state(
+            job_id,
+            status="completed",
+            message="PDF processado com sucesso",
+            total_products=len(products),
+            total_pages=total_pages,
+            error="",
+        )
+    except Exception as exc:
+        error_text = str(exc).strip() or "Falha interna ao processar PDF"
+        set_pdf_job_state(
+            job_id,
+            status="failed",
+            message="Falha ao processar PDF",
+            error=error_text,
+        )
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
 @app.on_event("startup")
 async def startup_event():
     migrate_legacy_files_if_needed()
@@ -661,7 +765,7 @@ def read_manager_hidden():
     return FileResponse("gerenciador.html", headers={"Cache-Control": "no-store"})
 
 
-@app.post("/upload-pdf")
+@app.post("/upload-pdf", status_code=202)
 async def upload_pdf(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
     _ = require_admin_session(authorization)
 
@@ -671,33 +775,49 @@ async def upload_pdf(file: UploadFile = File(...), authorization: Optional[str] 
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Formato invalido: envie um arquivo PDF")
 
-    content = await file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Arquivo vazio")
-    if not content.startswith(b"%PDF"):
-        raise HTTPException(status_code=400, detail="Arquivo invalido: cabecalho PDF nao encontrado")
-
     temp_path = ""
+    bytes_received = 0
+    header_probe = b""
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-            temp_file.write(content)
             temp_path = temp_file.name
+            while True:
+                chunk = await file.read(PDF_UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
 
-        products, total_pages = await run_in_threadpool(extract_products_from_pdf, temp_path)
-        if not products:
-            raise HTTPException(status_code=422, detail="Nenhum produto valido foi encontrado no PDF")
+                bytes_received += len(chunk)
+                if bytes_received > PDF_UPLOAD_MAX_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Arquivo muito grande. Limite de {max_pdf_upload_size_label()}.",
+                    )
 
-        await run_in_threadpool(replace_products, products)
+                if len(header_probe) < 1024:
+                    missing = 1024 - len(header_probe)
+                    header_probe += chunk[:missing]
+
+                temp_file.write(chunk)
+
+        if bytes_received <= 0:
+            raise HTTPException(status_code=400, detail="Arquivo vazio")
+        if b"%PDF" not in header_probe:
+            raise HTTPException(status_code=400, detail="Arquivo invalido: cabecalho PDF nao encontrado")
+
+        job_payload = create_pdf_job(filename=filename, file_size=bytes_received)
+        worker = Thread(target=process_pdf_job, args=(str(job_payload["job_id"]), temp_path), daemon=True)
+        worker.start()
+        temp_path = ""
+
         return {
-            "message": "PDF processado com sucesso",
-            "total_products": len(products),
-            "total_pages": total_pages,
-            "data_file": str(PRODUCTS_FILE),
+            "message": "Upload concluido. Processamento iniciado.",
+            "job_id": job_payload["job_id"],
+            "status": "queued",
         }
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Falha ao processar PDF: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Falha no upload: {exc}") from exc
     finally:
         await file.close()
         if temp_path and os.path.exists(temp_path):
@@ -705,6 +825,29 @@ async def upload_pdf(file: UploadFile = File(...), authorization: Optional[str] 
                 os.remove(temp_path)
             except OSError:
                 pass
+
+
+@app.get("/upload-pdf/status/{job_id}")
+def get_upload_pdf_status(job_id: str, authorization: Optional[str] = Header(None)):
+    _ = require_admin_session(authorization)
+
+    current = get_pdf_job(job_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail="Processamento nao encontrado ou expirado")
+
+    payload = {
+        "job_id": str(current.get("job_id", job_id)),
+        "status": str(current.get("status", "queued")),
+        "message": str(current.get("message", "")),
+        "filename": str(current.get("filename", "")),
+        "file_size": int(current.get("file_size", 0)),
+        "total_products": int(current.get("total_products", 0)),
+        "total_pages": int(current.get("total_pages", 0)),
+    }
+    error_text = str(current.get("error", "")).strip()
+    if error_text:
+        payload["error"] = error_text
+    return payload
 
 
 @app.get("/search")
