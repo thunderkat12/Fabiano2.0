@@ -354,7 +354,7 @@
     }
 
     async function waitForUploadJob(jobId) {
-      const deadline = Date.now() + 8 * 60 * 1000;
+      const deadline = Date.now() + 15 * 60 * 1000;
       let transientFailures = 0;
 
       while (Date.now() < deadline) {
@@ -379,11 +379,11 @@
         } catch (error) {
           if (error && error.isFatal) throw error;
           transientFailures += 1;
-          if (transientFailures >= 4) throw error;
-          setUploadProgress(95, 'Conexao oscilando. Tentando confirmar processamento...');
+          if (transientFailures >= 40) throw error;
+          setUploadProgress(95, 'Servidor instavel. Aguardando e tentando novamente...');
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
       throw new Error('Tempo de processamento excedido. Tente novamente em instantes.');

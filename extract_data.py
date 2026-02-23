@@ -36,18 +36,27 @@ def extract_products_from_pdf(pdf_path: str) -> tuple[list[dict[str, str]], int]
         total_pages = len(pdf.pages)
         print(f"Processing {total_pages} pages...")
 
-        for i, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text()
-            if not text:
-                continue
+        for i in range(total_pages):
+            page = pdf.pages[i]
+            try:
+                text = page.extract_text() or ""
+                for line in text.split("\n"):
+                    product = parse_product_line(line)
+                    if product:
+                        products.append(product)
+            finally:
+                # Libera estruturas de cache da pagina para reduzir pico de memoria.
+                try:
+                    page.flush_cache()
+                except Exception:
+                    pass
+                try:
+                    page.close()
+                except Exception:
+                    pass
 
-            for line in text.split("\n"):
-                product = parse_product_line(line)
-                if product:
-                    products.append(product)
-
-            if i % 10 == 0:
-                print(f"Processed {i}/{total_pages} pages...")
+            if (i + 1) % 10 == 0:
+                print(f"Processed {i + 1}/{total_pages} pages...")
 
     print(f"Extraction complete. Found {len(products)} products.")
     return products, total_pages

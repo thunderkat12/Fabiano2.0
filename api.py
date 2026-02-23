@@ -5,6 +5,8 @@ import json
 import os
 import re
 import secrets
+import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -15,7 +17,7 @@ from fastapi import FastAPI, Query, Header, HTTPException, UploadFile, File, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from extract_data import extract_products_from_pdf, save_products
+from extract_data import save_products
 
 app = FastAPI(title="Product API", description="API to search products from extracted PDF")
 
@@ -77,6 +79,7 @@ PDF_UPLOAD_MAX_BYTES = max(1024 * 1024, int(os.getenv("PDF_UPLOAD_MAX_BYTES", st
 PDF_UPLOAD_CHUNK_SIZE = max(64 * 1024, int(os.getenv("PDF_UPLOAD_CHUNK_SIZE", str(1024 * 1024))))
 PDF_JOB_RETENTION_SECONDS = max(300, int(os.getenv("PDF_JOB_RETENTION_SECONDS", "3600")))
 PDF_JOB_MAX_ENTRIES = max(10, int(os.getenv("PDF_JOB_MAX_ENTRIES", "50")))
+PDF_PROCESS_TIMEOUT_SECONDS = max(60, int(os.getenv("PDF_PROCESS_TIMEOUT_SECONDS", "900")))
 
 NON_WORD_PATTERN = re.compile(r"[^\w\s]")
 DIGITS_PATTERN = re.compile(r"\D")
@@ -595,10 +598,61 @@ def get_pdf_job(job_id: str) -> Optional[dict[str, Any]]:
         return dict(payload)
 
 
+def extract_products_with_worker(pdf_path: str) -> tuple[list[dict[str, Any]], int]:
+    temp_output_path = ""
+    worker_script = Path(__file__).with_name("extract_data.py")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as output_file:
+            temp_output_path = output_file.name
+
+        command = [
+            sys.executable,
+            str(worker_script),
+            "--pdf",
+            str(pdf_path),
+            "--out",
+            temp_output_path,
+        ]
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=PDF_PROCESS_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if result.returncode != 0:
+            details = (result.stderr or result.stdout or "").strip()
+            if not details:
+                details = "Falha ao extrair PDF no worker"
+            raise RuntimeError(details.splitlines()[-1][:400])
+
+        with open(temp_output_path, "r", encoding="utf-8") as f:
+            parsed = json.load(f)
+        if not isinstance(parsed, list):
+            raise RuntimeError("Worker retornou formato invalido")
+
+        total_pages = 0
+        match = re.search(r"Processing\s+(\d+)\s+pages", result.stdout or "")
+        if match:
+            try:
+                total_pages = int(match.group(1))
+            except ValueError:
+                total_pages = 0
+        return parsed, total_pages
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Tempo limite excedido ao processar PDF") from exc
+    finally:
+        if temp_output_path and os.path.exists(temp_output_path):
+            try:
+                os.remove(temp_output_path)
+            except OSError:
+                pass
+
+
 def process_pdf_job(job_id: str, temp_path: str) -> None:
     set_pdf_job_state(job_id, status="processing", message="Processando PDF no servidor...")
     try:
-        products, total_pages = extract_products_from_pdf(temp_path)
+        products, total_pages = extract_products_with_worker(temp_path)
         if not products:
             raise ValueError("Nenhum produto valido foi encontrado no PDF")
 
