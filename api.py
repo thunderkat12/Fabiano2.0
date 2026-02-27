@@ -56,6 +56,7 @@ if not MANAGER_ENTRY_KEY:
 MANAGER_ENTRY_ROUTE = f"/{MANAGER_ENTRY_KEY}"
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9_.-]{3,40}$")
+PRODUCT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,60}$")
 
 products_cache: Optional[list[dict[str, Any]]] = None
 products_index_cache: Optional[list[dict[str, Any]]] = None
@@ -94,6 +95,44 @@ SYNONYM_MAP = {
     "xm": "xiaomi",
     "xiaomi": "xm",
     "xiao": "xiaomi",
+}
+
+STOPWORDS = {
+    "a",
+    "as",
+    "o",
+    "os",
+    "um",
+    "uma",
+    "uns",
+    "umas",
+    "de",
+    "do",
+    "da",
+    "dos",
+    "das",
+    "e",
+    "em",
+    "no",
+    "na",
+    "nos",
+    "nas",
+    "para",
+    "com",
+    "sem",
+}
+
+TERM_NORMALIZATION_MAP = {
+    "diplsay": "display",
+    "diplay": "display",
+    "dislpay": "display",
+    "display": "display",
+    "iphne": "iphone",
+    "ifone": "iphone",
+    "ifon": "iphone",
+    "fone": "fone",
+    "pelicula": "pelicula",
+    "peliculaa": "pelicula",
 }
 
 CATEGORY_RULES = [
@@ -297,7 +336,7 @@ def load_products_from_disk() -> list[dict[str, Any]]:
         with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
             parsed = json.load(f)
         if isinstance(parsed, list):
-            return parsed
+            return normalize_product_list(parsed)
     except (OSError, json.JSONDecodeError):
         pass
     return []
@@ -376,10 +415,11 @@ def get_products_index() -> tuple[list[dict[str, Any]], int]:
 
 def replace_products(products: list[dict[str, Any]]) -> None:
     global products_cache, products_index_cache, products_version
+    normalized_products = normalize_product_list(products)
     with products_lock:
-        save_products(products, str(PRODUCTS_FILE))
-        products_cache = products
-        products_index_cache = build_products_index(products)
+        save_products(normalized_products, str(PRODUCTS_FILE))
+        products_cache = normalized_products
+        products_index_cache = build_products_index(normalized_products)
         products_version += 1
     clear_search_cache()
 
@@ -503,6 +543,105 @@ def parse_price(value: str) -> float:
         return 0.0
 
 
+def normalize_price_text(value: Any, field_name: str) -> str:
+    normalized = str(value or "0").replace(",", ".").strip()
+    if not normalized:
+        normalized = "0"
+    try:
+        amount = float(normalized)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"{field_name} invalido") from exc
+    if amount < 0:
+        raise HTTPException(status_code=400, detail=f"{field_name} nao pode ser negativo")
+    return f"{amount:.2f}"
+
+
+def normalize_stock_value(value: Any) -> int:
+    text = str(value or "0").strip()
+    if not text:
+        return 0
+    try:
+        amount = int(float(text.replace(",", ".")))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="stock invalido") from exc
+    if amount < 0:
+        raise HTTPException(status_code=400, detail="stock nao pode ser negativo")
+    return amount
+
+
+def normalize_product_id(value: Any) -> str:
+    text = str(value or "").strip()
+    if not PRODUCT_ID_PATTERN.fullmatch(text):
+        raise HTTPException(status_code=400, detail="id invalido. Use ate 60 caracteres: letras, numeros, '_', '-' ou '.'.")
+    return text
+
+
+def normalize_product_record(raw: Any, fallback_stock: Optional[int] = None) -> dict[str, Any]:
+    payload = raw if isinstance(raw, dict) else {}
+    product_id = str(payload.get("id", "")).strip()
+    description = str(payload.get("description", "")).strip()
+    if not product_id or not description:
+        return {}
+
+    unit = str(payload.get("unit", "UN") or "UN").strip().upper()[:12] or "UN"
+    try:
+        stock = normalize_stock_value(payload.get("stock", fallback_stock if fallback_stock is not None else 0))
+    except HTTPException:
+        stock = max(0, int(fallback_stock or 0))
+
+    try:
+        price_sight = normalize_price_text(payload.get("price_sight", "0"), "price_sight")
+    except HTTPException:
+        price_sight = "0.00"
+    try:
+        price_term = normalize_price_text(payload.get("price_term", "0"), "price_term")
+    except HTTPException:
+        price_term = "0.00"
+    try:
+        price_wholesale = normalize_price_text(payload.get("price_wholesale", "0"), "price_wholesale")
+    except HTTPException:
+        price_wholesale = "0.00"
+
+    return {
+        "id": product_id,
+        "description": description,
+        "unit": unit,
+        "price_sight": price_sight,
+        "price_term": price_term,
+        "price_wholesale": price_wholesale,
+        "stock": stock,
+    }
+
+
+def build_existing_stock_map(products: list[dict[str, Any]]) -> dict[str, int]:
+    stock_by_id: dict[str, int] = {}
+    for item in products:
+        product_id = str(item.get("id", "")).strip()
+        if not product_id:
+            continue
+        try:
+            stock_by_id[product_id] = normalize_stock_value(item.get("stock", 0))
+        except HTTPException:
+            stock_by_id[product_id] = 0
+    return stock_by_id
+
+
+def normalize_product_list(raw_products: list[Any], stock_by_id: Optional[dict[str, int]] = None) -> list[dict[str, Any]]:
+    normalized_products: list[dict[str, Any]] = []
+    deduplicated_by_id: dict[str, dict[str, Any]] = {}
+    for raw in raw_products:
+        payload = raw if isinstance(raw, dict) else {}
+        product_id = str(payload.get("id", "")).strip()
+        fallback_stock = stock_by_id.get(product_id) if (stock_by_id is not None and product_id) else None
+        normalized = normalize_product_record(payload, fallback_stock=fallback_stock)
+        if not normalized:
+            continue
+        deduplicated_by_id[normalized["id"]] = normalized
+    for key in sorted(deduplicated_by_id.keys(), key=code_sort_key):
+        normalized_products.append(deduplicated_by_id[key])
+    return normalized_products
+
+
 def normalize_text(value: str) -> str:
     cleaned = NON_WORD_PATTERN.sub(" ", str(value).lower().strip())
     return " ".join(cleaned.split())
@@ -513,6 +652,50 @@ def tokenize(value: str) -> list[str]:
     if not normalized:
         return []
     return normalized.split()
+
+
+def normalize_query_terms(value: str) -> list[str]:
+    terms: list[str] = []
+    seen: set[str] = set()
+    for raw in tokenize(value):
+        normalized = TERM_NORMALIZATION_MAP.get(raw, raw)
+        if normalized in STOPWORDS:
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        terms.append(normalized)
+    return terms
+
+
+def score_text_against_terms(text: str, terms: list[str]) -> tuple[int, int]:
+    normalized_text = normalize_text(text)
+    words = tokenize(normalized_text)
+    if not words:
+        return (0, 0)
+
+    word_set = set(words)
+    score = 0
+    matched = 0
+    for term in terms:
+        synonym = SYNONYM_MAP.get(term)
+        candidates = [term]
+        if synonym:
+            candidates.append(synonym)
+
+        term_score = 0
+        for candidate in candidates:
+            if candidate in word_set:
+                term_score = max(term_score, 220)
+            elif any(word.startswith(candidate) for word in words):
+                term_score = max(term_score, 140)
+            elif candidate in normalized_text:
+                term_score = max(term_score, 90)
+        if term_score > 0:
+            matched += 1
+            score += term_score
+
+    return (score, matched)
 
 
 def infer_category(description: str) -> str:
@@ -529,6 +712,31 @@ def code_sort_key(value: Any) -> tuple[int, str]:
     if digits:
         return (0, digits.zfill(12))
     return (1, text.lower())
+
+
+def build_product_from_admin_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    product_id = normalize_product_id(payload.get("id", ""))
+    description = str(payload.get("description", "")).strip()
+    if not description:
+        raise HTTPException(status_code=400, detail="description obrigatorio")
+
+    unit = str(payload.get("unit", "UN") or "UN").strip().upper()[:12] or "UN"
+    return {
+        "id": product_id,
+        "description": description,
+        "unit": unit,
+        "price_sight": normalize_price_text(payload.get("price_sight", "0"), "price_sight"),
+        "price_term": normalize_price_text(payload.get("price_term", "0"), "price_term"),
+        "price_wholesale": normalize_price_text(payload.get("price_wholesale", "0"), "price_wholesale"),
+        "stock": normalize_stock_value(payload.get("stock", 0)),
+    }
+
+
+def find_product_position(products: list[dict[str, Any]], product_id: str) -> int:
+    for index, item in enumerate(products):
+        if str(item.get("id", "")).strip() == product_id:
+            return index
+    return -1
 
 
 def max_pdf_upload_size_label() -> str:
@@ -655,13 +863,14 @@ def process_pdf_job(job_id: str, temp_path: str) -> None:
         products, total_pages = extract_products_with_worker(temp_path)
         if not products:
             raise ValueError("Nenhum produto valido foi encontrado no PDF")
-
-        replace_products(products)
+        existing_stock_by_id = build_existing_stock_map(get_products())
+        merged_products = normalize_product_list(products, stock_by_id=existing_stock_by_id)
+        replace_products(merged_products)
         set_pdf_job_state(
             job_id,
             status="completed",
             message="PDF processado com sucesso",
-            total_products=len(products),
+            total_products=len(merged_products),
             total_pages=total_pages,
             error="",
         )
@@ -804,6 +1013,112 @@ def admin_update_config(payload: dict[str, Any], authorization: Optional[str] = 
     return {"message": "Configuracoes atualizadas", "config": updated}
 
 
+@app.get("/admin/products")
+def admin_list_products(
+    query: str = Query("", max_length=120),
+    limit: int = Query(5, ge=1, le=5),
+    offset: int = Query(0, ge=0),
+    authorization: Optional[str] = Header(None),
+):
+    _ = require_admin_session(authorization)
+    query_terms = normalize_query_terms(query)
+
+    indexed_products, _ = get_products_index()
+    ranked: list[tuple[int, dict[str, Any]]] = []
+    for entry in indexed_products:
+        item = dict(entry["product"])
+        if query_terms:
+            id_score, id_matches = score_text_against_terms(str(item.get("id", "")), query_terms)
+            desc_score, desc_matches = score_text_against_terms(str(item.get("description", "")), query_terms)
+            matched_terms = max(id_matches, desc_matches)
+            if matched_terms <= 0:
+                continue
+            if matched_terms < len(query_terms):
+                continue
+            total_score = (desc_score * 2) + id_score
+            ranked.append((total_score, item))
+        else:
+            ranked.append((0, item))
+
+    ranked.sort(key=lambda pair: (-pair[0], code_sort_key(pair[1].get("id", ""))))
+    total = len(ranked)
+    paged = ranked[offset : offset + limit]
+    results = [item for _score, item in paged]
+    return {
+        "total": total,
+        "count": len(results),
+        "offset": offset,
+        "limit": limit,
+        "results": results,
+    }
+
+
+@app.post("/admin/products")
+def admin_create_product(payload: dict[str, Any], authorization: Optional[str] = Header(None)):
+    _ = require_admin_session(authorization)
+    new_product = build_product_from_admin_payload(payload)
+
+    products = [dict(item) for item in get_products()]
+    existing_index = find_product_position(products, new_product["id"])
+    if existing_index >= 0:
+        raise HTTPException(status_code=409, detail="Ja existe produto com este id")
+
+    products.append(new_product)
+    replace_products(products)
+    return {"message": "Produto criado com sucesso", "product": new_product}
+
+
+@app.put("/admin/products/{product_id}")
+def admin_update_product(product_id: str, payload: dict[str, Any], authorization: Optional[str] = Header(None)):
+    _ = require_admin_session(authorization)
+    normalized_id = normalize_product_id(product_id)
+
+    products = [dict(item) for item in get_products()]
+    target_index = find_product_position(products, normalized_id)
+    if target_index < 0:
+        raise HTTPException(status_code=404, detail="Produto nao encontrado")
+
+    current = dict(products[target_index])
+    if "description" in payload:
+        description = str(payload.get("description", "")).strip()
+        if not description:
+            raise HTTPException(status_code=400, detail="description obrigatorio")
+        current["description"] = description
+    if "unit" in payload:
+        current["unit"] = str(payload.get("unit", "UN") or "UN").strip().upper()[:12] or "UN"
+    if "price_sight" in payload:
+        current["price_sight"] = normalize_price_text(payload.get("price_sight"), "price_sight")
+    if "price_term" in payload:
+        current["price_term"] = normalize_price_text(payload.get("price_term"), "price_term")
+    if "price_wholesale" in payload:
+        current["price_wholesale"] = normalize_price_text(payload.get("price_wholesale"), "price_wholesale")
+    if "stock" in payload:
+        current["stock"] = normalize_stock_value(payload.get("stock"))
+
+    normalized = normalize_product_record(current)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Produto invalido")
+
+    products[target_index] = normalized
+    replace_products(products)
+    return {"message": "Produto atualizado com sucesso", "product": normalized}
+
+
+@app.delete("/admin/products/{product_id}")
+def admin_delete_product(product_id: str, authorization: Optional[str] = Header(None)):
+    _ = require_admin_session(authorization)
+    normalized_id = normalize_product_id(product_id)
+
+    products = [dict(item) for item in get_products()]
+    target_index = find_product_position(products, normalized_id)
+    if target_index < 0:
+        raise HTTPException(status_code=404, detail="Produto nao encontrado")
+
+    removed = products.pop(target_index)
+    replace_products(products)
+    return {"message": "Produto removido com sucesso", "product": removed}
+
+
 @app.get("/")
 def read_root():
     return FileResponse("index.html", headers={"Cache-Control": "no-store"})
@@ -918,7 +1233,7 @@ def search_products(
     """
     Search for products by description with intelligent synonym-aware ranking.
     """
-    query_terms = tokenize(query)
+    query_terms = normalize_query_terms(query)
     if not query_terms:
         return {"count": 0, "results": []}
 

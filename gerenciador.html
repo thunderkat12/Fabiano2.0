@@ -12,6 +12,19 @@
       border-color: #4f46e5 !important;
       background-color: #eef2ff !important;
     }
+    .product-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    }
+    .search-mark {
+      background: #fde68a;
+      color: #0f172a;
+      border-radius: 4px;
+      padding: 0 2px;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 p-3 sm:p-4 md:p-6">
@@ -124,6 +137,48 @@
         </div>
       </section>
 
+      <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 class="text-base font-semibold text-slate-800">Gestao de produtos</h3>
+            <p class="text-xs text-slate-500">Busca semantica por codigo/descricao (corrige termos como "diplsay"). Maximo de 5 resultados por pagina.</p>
+          </div>
+          <button type="button" onclick="clearProductForm()" class="px-3 py-2 text-xs bg-white border rounded hover:bg-slate-100 min-h-[36px]">
+            Limpar formulario
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+          <input id="productSearchInput" type="text" class="w-full p-2.5 border-2 border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px] bg-white" placeholder="Ex: display de iphone / bateria samsung..." />
+          <button type="button" onclick="loadAdminProducts(true)" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[44px]">Buscar</button>
+        </div>
+        <p id="productsSearchMeta" class="text-xs text-slate-500"></p>
+
+        <div class="border rounded-lg p-3 bg-white space-y-2">
+          <p class="text-xs text-slate-500 font-medium">Adicionar novo produto</p>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <input id="newProductId" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Codigo" />
+            <input id="newProductDescription" type="text" class="p-2 border rounded min-h-[40px] md:col-span-2" placeholder="Descricao" />
+            <input id="newProductUnit" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Unidade (UN)" />
+            <input id="newProductPriceSight" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco a vista" />
+            <input id="newProductPriceTerm" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco a prazo" />
+            <input id="newProductPriceWholesale" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco atacado" />
+            <input id="newProductStock" type="number" min="0" class="p-2 border rounded min-h-[40px]" placeholder="Estoque" />
+          </div>
+          <button type="button" onclick="createProduct()" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 min-h-[40px]">Adicionar produto</button>
+        </div>
+
+        <div id="productsAdminList" class="space-y-2">
+          <div class="text-sm text-slate-500">Nenhum produto carregado.</div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2">
+          <button id="productsPrevBtn" type="button" onclick="changeProductsPage(-1)" class="px-3 py-2 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 min-h-[40px]">Anterior</button>
+          <p id="productsPageInfo" class="text-xs text-slate-500">Pagina 1</p>
+          <button id="productsNextBtn" type="button" onclick="changeProductsPage(1)" class="px-3 py-2 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 min-h-[40px]">Proxima</button>
+        </div>
+      </section>
+
       <p class="text-xs text-slate-500">Criador: thunderkat12 | Contato: 61995651684</p>
     </section>
 
@@ -135,10 +190,32 @@
     let adminSession = null;
     let selectedPdfFile = null;
     let uploadInFlight = false;
+    let productsAdminOffset = 0;
+    const productsAdminLimit = 5;
+    let productsAdminTotal = 0;
+    const ADMIN_SEARCH_STOPWORDS = new Set(['a', 'as', 'o', 'os', 'um', 'uma', 'uns', 'umas', 'de', 'do', 'da', 'dos', 'das', 'e', 'em', 'no', 'na', 'nos', 'nas', 'para', 'com', 'sem']);
+    const ADMIN_SEARCH_NORMALIZATION = {
+      diplsay: 'display',
+      diplay: 'display',
+      dislpay: 'display',
+      iphne: 'iphone',
+      ifone: 'iphone',
+      ifon: 'iphone',
+    };
 
     window.onload = async function () {
       document.getElementById('loginUser').value = '';
       setupPdfUploadHandlers();
+      clearProductForm();
+      const productSearchInput = document.getElementById('productSearchInput');
+      if (productSearchInput) {
+        productSearchInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            loadAdminProducts(true);
+          }
+        });
+      }
       renderAuthState();
       if (adminToken) {
         const ok = await loadSession();
@@ -447,6 +524,7 @@
         const totalProducts = Number(response.total_products || 0);
         const totalPages = Number(response.total_pages || 0);
         setStatus(`Atualizacao concluida: ${totalProducts} produtos em ${totalPages} paginas.`, 'ok');
+        await loadAdminProducts(true);
         clearSelectedPdfFile();
         setTimeout(() => {
           const wrap = document.getElementById('uploadProgressWrap');
@@ -650,8 +728,12 @@
       adminToken = '';
       adminSession = null;
       selectedPdfFile = null;
+      productsAdminOffset = 0;
+      productsAdminTotal = 0;
       sessionStorage.removeItem('adminToken');
       renderAuthState();
+      const listEl = document.getElementById('productsAdminList');
+      if (listEl) listEl.innerHTML = '<div class="text-sm text-slate-500">Faca login para gerenciar produtos.</div>';
       if (showStatus) setStatus('Sessao encerrada.', 'neutral');
     }
 
@@ -663,6 +745,7 @@
         if (!response.ok) throw new Error('Nao foi possivel carregar configuracoes');
         const data = await response.json();
         applyConfigToForm(data);
+        await loadAdminProducts(true);
         renderAuthState();
         setStatus('Configuracoes carregadas.', 'ok');
       } catch (error) {
@@ -692,6 +775,306 @@
         if (String(error.message).toLowerCase().includes('sessao')) {
           logoutAdmin(false);
         }
+      }
+    }
+
+    function parseDetailMessage(response, fallbackMessage) {
+      if (!response) return fallbackMessage;
+      return response.json()
+        .then((data) => {
+          if (data && typeof data.detail === 'string' && data.detail.trim()) return data.detail.trim();
+          return fallbackMessage;
+        })
+        .catch(() => fallbackMessage);
+    }
+
+    function normalizeMoneyInput(value) {
+      const n = Number.parseFloat(String(value || '').replace(',', '.'));
+      if (!Number.isFinite(n) || n < 0) return '0.00';
+      return n.toFixed(2);
+    }
+
+    function normalizeStockInput(value) {
+      const n = Number.parseInt(String(value || '0'), 10);
+      if (!Number.isFinite(n) || n < 0) return 0;
+      return n;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function productSearchQuery() {
+      const input = document.getElementById('productSearchInput');
+      return String(input ? input.value : '').trim();
+    }
+
+    function getQueryTermsForHighlight() {
+      const raw = productSearchQuery().toLowerCase().replace(/[^\w\s]/g, ' ');
+      const parts = raw.split(/\s+/).filter(Boolean);
+      const terms = [];
+      const seen = new Set();
+      parts.forEach((part) => {
+        const normalized = ADMIN_SEARCH_NORMALIZATION[part] || part;
+        if (ADMIN_SEARCH_STOPWORDS.has(normalized)) return;
+        if (seen.has(normalized)) return;
+        seen.add(normalized);
+        terms.push(normalized);
+      });
+      return terms;
+    }
+
+    function escapeRegex(value) {
+      return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightTerms(value, terms) {
+      const rawText = String(value || '');
+      if (!terms.length) return escapeHtml(rawText);
+      let rendered = escapeHtml(rawText);
+      terms
+        .filter((term) => term.length >= 2)
+        .sort((a, b) => b.length - a.length)
+        .forEach((term) => {
+          const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+          rendered = rendered.replace(regex, '<span class="search-mark">$1</span>');
+        });
+      return rendered;
+    }
+
+    function updateProductsPager() {
+      const prevBtn = document.getElementById('productsPrevBtn');
+      const nextBtn = document.getElementById('productsNextBtn');
+      const infoEl = document.getElementById('productsPageInfo');
+      const pageNumber = Math.floor(productsAdminOffset / productsAdminLimit) + 1;
+      const maxPage = Math.max(1, Math.ceil(productsAdminTotal / productsAdminLimit));
+      if (prevBtn) prevBtn.disabled = productsAdminOffset <= 0;
+      if (nextBtn) nextBtn.disabled = productsAdminOffset + productsAdminLimit >= productsAdminTotal;
+      if (infoEl) infoEl.textContent = `Pagina ${pageNumber} de ${maxPage} (${productsAdminTotal} itens)`;
+    }
+
+    function clearProductForm() {
+      document.getElementById('newProductId').value = '';
+      document.getElementById('newProductDescription').value = '';
+      document.getElementById('newProductUnit').value = 'UN';
+      document.getElementById('newProductPriceSight').value = '';
+      document.getElementById('newProductPriceTerm').value = '';
+      document.getElementById('newProductPriceWholesale').value = '';
+      document.getElementById('newProductStock').value = '0';
+    }
+
+    function renderAdminProducts(items) {
+      const listEl = document.getElementById('productsAdminList');
+      if (!listEl) return;
+      const terms = getQueryTermsForHighlight();
+      const searchMeta = document.getElementById('productsSearchMeta');
+      if (searchMeta) {
+        const query = productSearchQuery();
+        searchMeta.textContent = query
+          ? `Resultados para "${query}" (termos semanticos: ${terms.join(', ') || 'nenhum'})`
+          : 'Exibindo catalogo completo em blocos de 5 itens.';
+      }
+
+      if (!Array.isArray(items) || items.length === 0) {
+        listEl.innerHTML = '<div class="text-sm text-slate-500">Nenhum produto encontrado.</div>';
+        updateProductsPager();
+        return;
+      }
+
+      listEl.innerHTML = '';
+      items.forEach((item) => {
+        const id = escapeHtml(item.id);
+        const desc = highlightTerms(item.description, terms);
+        const unit = escapeHtml(item.unit || 'UN');
+        const priceSight = escapeHtml(item.price_sight || '0.00');
+        const priceTerm = escapeHtml(item.price_term || '0.00');
+        const priceWholesale = escapeHtml(item.price_wholesale || '0.00');
+        const stock = escapeHtml(item.stock || 0);
+
+        const card = document.createElement('div');
+        card.className = 'product-card p-3 space-y-2';
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
+            <p class="text-xs text-slate-500 tracking-wide">CODIGO: <span class="font-semibold text-slate-700">${id}</span></p>
+            <button type="button" class="delete-product-btn px-3 py-1.5 text-xs text-red-600 border rounded hover:bg-red-50 min-h-[34px]">Excluir</button>
+          </div>
+          <p class="text-sm text-slate-800 leading-snug">${desc}</p>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div>
+              <label class="text-[11px] text-slate-500">Unidade</label>
+              <input type="text" class="product-unit p-2 border rounded w-full min-h-[40px]" value="${unit}" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">Preco a vista</label>
+              <input type="text" class="product-price-sight p-2 border rounded w-full min-h-[40px]" value="${priceSight}" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">Preco a prazo</label>
+              <input type="text" class="product-price-term p-2 border rounded w-full min-h-[40px]" value="${priceTerm}" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">Preco atacado</label>
+              <input type="text" class="product-price-wholesale p-2 border rounded w-full min-h-[40px]" value="${priceWholesale}" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-end">
+            <div>
+              <label class="text-[11px] text-slate-500">Descricao</label>
+              <input type="text" class="product-description p-2 border rounded w-full min-h-[40px]" value="${escapeHtml(item.description)}" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">Estoque</label>
+              <input type="number" min="0" class="product-stock p-2 border rounded w-full min-h-[40px]" value="${stock}" />
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button type="button" class="save-product-btn px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]">Salvar alteracoes</button>
+          </div>
+        `;
+
+        card.querySelector('.save-product-btn').addEventListener('click', () => updateProduct(item.id, card));
+        card.querySelector('.delete-product-btn').addEventListener('click', () => deleteProduct(item.id));
+        listEl.appendChild(card);
+      });
+      updateProductsPager();
+    }
+
+    async function loadAdminProducts(resetOffset = false) {
+      if (!adminToken) return;
+      if (resetOffset) productsAdminOffset = 0;
+      try {
+        const params = new URLSearchParams();
+        const query = productSearchQuery();
+        if (query) params.set('query', query);
+        params.set('limit', String(productsAdminLimit));
+        params.set('offset', String(productsAdminOffset));
+
+        const response = await fetch(`/admin/products?${params.toString()}`, { headers: authHeaders() });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) {
+          const detail = await parseDetailMessage(response, 'Nao foi possivel carregar produtos');
+          throw new Error(detail);
+        }
+        const data = await response.json();
+        productsAdminTotal = Number(data.total || 0);
+        renderAdminProducts(Array.isArray(data.results) ? data.results : []);
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) {
+          logoutAdmin(false);
+        }
+      }
+    }
+
+    function changeProductsPage(direction) {
+      const nextOffset = productsAdminOffset + (direction * productsAdminLimit);
+      if (nextOffset < 0) return;
+      if (nextOffset >= productsAdminTotal && direction > 0) return;
+      productsAdminOffset = nextOffset;
+      loadAdminProducts(false);
+    }
+
+    async function createProduct() {
+      if (!adminToken) return;
+      const payload = {
+        id: document.getElementById('newProductId').value.trim(),
+        description: document.getElementById('newProductDescription').value.trim(),
+        unit: document.getElementById('newProductUnit').value.trim() || 'UN',
+        price_sight: normalizeMoneyInput(document.getElementById('newProductPriceSight').value),
+        price_term: normalizeMoneyInput(document.getElementById('newProductPriceTerm').value),
+        price_wholesale: normalizeMoneyInput(document.getElementById('newProductPriceWholesale').value),
+        stock: normalizeStockInput(document.getElementById('newProductStock').value),
+      };
+
+      if (!payload.id || !payload.description) {
+        setStatus('Informe codigo e descricao para cadastrar o produto.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/admin/products', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) {
+          const detail = await parseDetailMessage(response, 'Nao foi possivel criar produto');
+          throw new Error(detail);
+        }
+        clearProductForm();
+        setStatus('Produto adicionado com sucesso.', 'ok');
+        await loadAdminProducts(true);
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function updateProduct(productId, card) {
+      if (!adminToken || !card) return;
+      const payload = {
+        description: String(card.querySelector('.product-description')?.value || '').trim(),
+        unit: String(card.querySelector('.product-unit')?.value || 'UN').trim() || 'UN',
+        price_sight: normalizeMoneyInput(card.querySelector('.product-price-sight')?.value),
+        price_term: normalizeMoneyInput(card.querySelector('.product-price-term')?.value),
+        price_wholesale: normalizeMoneyInput(card.querySelector('.product-price-wholesale')?.value),
+        stock: normalizeStockInput(card.querySelector('.product-stock')?.value),
+      };
+
+      if (!payload.description) {
+        setStatus('Descricao do produto nao pode ficar vazia.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/admin/products/${encodeURIComponent(productId)}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) {
+          const detail = await parseDetailMessage(response, 'Nao foi possivel atualizar produto');
+          throw new Error(detail);
+        }
+        setStatus(`Produto ${productId} atualizado.`, 'ok');
+        await loadAdminProducts(false);
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function deleteProduct(productId) {
+      if (!adminToken) return;
+      const confirmed = window.confirm(`Confirma excluir o produto ${productId}?`);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`/admin/products/${encodeURIComponent(productId)}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) {
+          const detail = await parseDetailMessage(response, 'Nao foi possivel excluir produto');
+          throw new Error(detail);
+        }
+
+        if (productsAdminOffset > 0 && productsAdminOffset >= Math.max(0, productsAdminTotal - 1)) {
+          productsAdminOffset = Math.max(0, productsAdminOffset - productsAdminLimit);
+        }
+        setStatus(`Produto ${productId} removido.`, 'ok');
+        await loadAdminProducts(false);
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
       }
     }
   </script>
