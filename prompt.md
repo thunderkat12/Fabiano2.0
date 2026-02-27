@@ -1,7 +1,7 @@
 # API de Busca de Produtos - Estado Atual
 
 Documento de referencia do projeto `Fabiano_Acessorios`.
-Status consolidado em **22/02/2026**.
+Status consolidado em **27/02/2026**.
 
 ---
 
@@ -33,6 +33,11 @@ Aplicacao web para:
   - `GET /admin/config`
   - `PUT /admin/config`
   - `POST /upload-pdf` (requer token Bearer)
+  - `GET /upload-pdf/status/{job_id}` (polling do processamento de PDF)
+  - `GET /admin/products` (listagem/pesquisa paginada para gestao)
+  - `POST /admin/products` (criacao manual de produto)
+  - `PUT /admin/products/{product_id}` (edicao de produto)
+  - `DELETE /admin/products/{product_id}` (exclusao de produto)
 - Painel admin:
   - `GET /gerenciador` retorna 404 (rota publica bloqueada)
   - rota real por chave: `/{MANAGER_ENTRY_KEY}` (padrao: `/Daniel@qwe`)
@@ -47,7 +52,9 @@ Aplicacao web para:
 ### Busca inteligente (`GET /search`)
 
 - Tokenizacao e normalizacao de texto.
+- Remove termos pouco relevantes na consulta (ex.: `de`, `do`, `da`, etc.).
 - Mapa de sinonimos (ex.: `ip` <-> `iphone`, `sam` <-> `samsung`).
+- Normalizacao de erros comuns de digitacao (ex.: `diplsay` -> `display`, `ifone` -> `iphone`).
 - Ranking por relevancia com pesos por:
   - match exato de palavra;
   - prefixo de palavra;
@@ -96,6 +103,12 @@ Aplicacao web para:
   - validacao de extensao/tipo;
   - barra de progresso;
   - feedback de erro/sucesso.
+- Gestao completa de produtos:
+  - busca semantica por codigo/descricao;
+  - edicao inline de descricao/unidade/precos/estoque;
+  - criacao e exclusao de itens;
+  - paginacao em blocos de **5 itens por pagina** no admin.
+- Layout da gestao de produtos reorganizado para leitura rapida.
 
 ---
 
@@ -108,7 +121,7 @@ PDF -> extract_data.py -> products.json -> api.py -> index.html / gerenciador.ht
 Fluxo de atualizacao de catalogo:
 1. Admin autentica.
 2. Admin envia PDF em `/upload-pdf`.
-3. Backend extrai produtos e substitui `products.json`.
+3. Backend extrai produtos, normaliza registros e preserva estoque por `id` quando aplicavel.
 4. Cache de busca e indice sao invalidados/reconstruidos.
 
 ---
@@ -154,16 +167,16 @@ uvicorn api:app --reload
 
 ## 6) Onde paramos (ultimos commits)
 
-1. `cedab3e` (2026-02-21)  
-   Correcoes de design no frontend e ajuste de configuracao admin.
-2. `d97bf6c` (2026-02-21)  
-   `start_app.bat` abre a aplicacao pela URL local da API, nao mais `file://`.
-3. `e5a5551` (2026-02-18)  
-   Seguranca: rota admin publica removida, rota oculta por chave, rate limit de login.
-4. `17a9c95` (2026-02-18)  
-   Pos-envio WhatsApp limpa estado; limite maximo por pagina fixado em 10.
-5. `725e374` (2026-02-18)  
-   Fluxo admin/upload finalizado e checklist inicial atualizado.
+1. `c61b260` (2026-02-27)  
+   UI da loja: faixa de novidade da busca inteligente, destaque visual de termos buscados e micro-animacao de entrada dos cards.
+2. `ae25143` (2026-02-27)  
+   Admin: busca semantica melhorada, normalizacao de termos e redesign da gestao de produtos (com foco em edicao rapida).
+3. `625e317` (2026-02-23)  
+   Melhoria de estabilidade no upload/processamento de PDF e limpeza de artefatos antigos.
+4. `bdf4b71` (2026-02-23)  
+   Upload de PDF assincrono com polling de status.
+5. `12ae74b` (2026-02-22)  
+   Suporte a taxa de entrega por regiao no admin/carrinho.
 
 ---
 
