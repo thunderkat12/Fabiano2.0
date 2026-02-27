@@ -66,6 +66,37 @@
       animation: fadeIn .45s ease-out both;
     }
 
+    .update-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.7rem 0.85rem;
+      margin-bottom: 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(196, 154, 44, 0.35);
+      background: linear-gradient(120deg, rgba(196, 154, 44, 0.14), rgba(196, 154, 44, 0.08));
+      color: var(--text);
+    }
+
+    .update-pill {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border-radius: 999px;
+      border: 1px solid rgba(196, 154, 44, 0.5);
+      background: rgba(196, 154, 44, 0.2);
+      color: var(--accent-deep);
+      padding: 0.15rem 0.55rem;
+      animation: pulseTag 2.2s ease-in-out infinite;
+    }
+
+    @keyframes pulseTag {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -267,6 +298,21 @@
       box-shadow: 0 10px 26px rgba(10, 9, 8, 0.08);
     }
 
+    .result-card.fresh {
+      animation: cardReveal .22s ease-out both;
+    }
+
+    @keyframes cardReveal {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.995);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     .result-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 16px 30px rgba(10, 9, 8, 0.14);
@@ -294,6 +340,14 @@
     .result-price {
       color: var(--success);
       letter-spacing: -0.02em;
+    }
+
+    .search-highlight {
+      background: rgba(196, 154, 44, 0.3);
+      border-radius: 4px;
+      padding: 0 2px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
     }
 
     #cartToggleBtn {
@@ -440,6 +494,11 @@
     <div id="statusMessage" class="hidden text-center mb-4 text-sm font-semibold"></div>
 
     <div class="mb-6">
+      <div class="update-banner">
+        <span class="update-pill">Novidade</span>
+        <p class="text-sm">Busca inteligente atualizada: entende erros de digitacao e termos parecidos.</p>
+      </div>
+
       <div class="flex flex-col sm:flex-row gap-2">
         <div class="relative flex-1">
           <input type="text" id="searchInput" class="w-full p-4 pl-12 border border-gray-200 rounded-xl shadow-inner text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition min-h-[48px]" placeholder="Digite o nome do produto..." onkeypress="handleKeyPress(event)" />
@@ -576,6 +635,15 @@
     const MAX_RECENT_SEARCHES = 8;
     const MAX_WARNING_LOGS = 120;
     const MAX_CART_ITEMS_SOFT_LIMIT = 300;
+    const HIGHLIGHT_STOPWORDS = new Set(['a', 'as', 'o', 'os', 'um', 'uma', 'de', 'do', 'da', 'dos', 'das', 'e', 'em', 'no', 'na', 'nos', 'nas', 'para', 'com', 'sem']);
+    const HIGHLIGHT_TERM_MAP = {
+      diplsay: 'display',
+      diplay: 'display',
+      dislpay: 'display',
+      ifone: 'iphone',
+      ifon: 'iphone',
+      iphne: 'iphone',
+    };
     const PUBLIC_CONFIG_DEFAULT = {
       store_name: 'Busca Inteligente de Produtos',
       store_tagline: 'Busca com filtros, paginacao e carrinho persistente.',
@@ -654,6 +722,38 @@
     function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0); }
     function removeAccents(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
     function normalizeMatchText(value) { return removeAccents(String(value || '').toLowerCase()); }
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    function escapeRegex(value) { return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function extractHighlightTerms(query) {
+      const normalized = normalizeMatchText(query).replace(/[^\w\s]/g, ' ');
+      const seen = new Set();
+      return normalized
+        .split(/\s+/)
+        .map((term) => HIGHLIGHT_TERM_MAP[term] || term)
+        .filter((term) => term && term.length >= 2 && !HIGHLIGHT_STOPWORDS.has(term))
+        .filter((term) => {
+          if (seen.has(term)) return false;
+          seen.add(term);
+          return true;
+        });
+    }
+    function highlightText(text, terms) {
+      let rendered = escapeHtml(text);
+      terms
+        .sort((a, b) => b.length - a.length)
+        .forEach((term) => {
+          const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+          rendered = rendered.replace(regex, '<span class="search-highlight">$1</span>');
+        });
+      return rendered;
+    }
     function getDeliveryFeeAmount() {
       const amount = toNumber(orderConfig.delivery_fee_amount);
       return amount > 0 ? amount : 0;
@@ -1025,6 +1125,7 @@
       if (!query) return;
       if (resetOffset || query !== lastQuery) currentOffset = 0;
       lastQuery = query;
+      const highlightTerms = extractHighlightTerms(query);
 
       const resultsArea = document.getElementById('resultsArea');
       const paginationArea = document.getElementById('paginationArea');
@@ -1059,18 +1160,19 @@
 
         data.results.forEach((product, index) => {
           const item = document.createElement('div');
-          item.className = 'result-card p-3 sm:p-4 transition flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 fade-in';
+          item.className = 'result-card fresh p-3 sm:p-4 transition flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3';
           item.style.animationDelay = `${index * 0.04}s`;
 
           const priceValue = toNumber(product.price_sight);
           const categoryBadge = product.category
-            ? `<span class="category-badge inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full">${product.category}</span>`
+            ? `<span class="category-badge inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full">${escapeHtml(product.category)}</span>`
             : '';
+          const highlightedDescription = highlightText(product.description || '', highlightTerms);
           item.innerHTML = `
             <div>
-              <div class="result-code text-xs font-bold mb-1">COD: ${product.id}</div>
-              <h3 class="result-title font-semibold">${product.description}</h3>
-              <div class="result-meta text-xs mt-1">Unidade: ${product.unit}</div>
+              <div class="result-code text-xs font-bold mb-1">COD: ${escapeHtml(product.id)}</div>
+              <h3 class="result-title font-semibold">${highlightedDescription}</h3>
+              <div class="result-meta text-xs mt-1">Unidade: ${escapeHtml(product.unit)}</div>
               ${categoryBadge}
             </div>
             <div class="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3">
