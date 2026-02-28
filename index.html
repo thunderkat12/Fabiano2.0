@@ -258,7 +258,51 @@
     }
 
     #heroHeader #storeTagline {
-      color: rgba(248, 244, 236, 0.78) !important;
+      display: inline-block;
+      margin-top: 0.15rem;
+      max-width: min(100%, 34ch);
+      padding: 0.34rem 0.92rem 0.38rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 230, 163, 0.72);
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255, 252, 235, 0.72) 0%, rgba(255, 252, 235, 0) 48%),
+        linear-gradient(128deg, #f8e7ae 0%, #e6c566 48%, #bc8a2b 100%);
+      color: #3e2908 !important;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.73rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      line-height: 1.05;
+      text-shadow: 0 1px 0 rgba(255, 249, 227, 0.55);
+      box-shadow:
+        0 10px 24px rgba(92, 62, 9, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      position: relative;
+      isolation: isolate;
+      text-wrap: balance;
+    }
+
+    #heroHeader #storeTagline::before {
+      content: '';
+      position: absolute;
+      inset: -7px -12px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(246, 204, 87, 0.4) 0%, rgba(246, 204, 87, 0) 72%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    body.dark-mode #heroHeader #storeTagline {
+      border-color: rgba(255, 221, 142, 0.78);
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255, 250, 219, 0.72) 0%, rgba(255, 250, 219, 0) 48%),
+        linear-gradient(128deg, #f6dd98 0%, #e3b958 48%, #ac7621 100%);
+      color: #2b1a06 !important;
+      box-shadow:
+        0 12px 26px rgba(0, 0, 0, 0.42),
+        0 0 22px rgba(230, 185, 88, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.48);
     }
 
     #creatorInfo,
@@ -594,6 +638,12 @@
 
       #storeName {
         font-size: 2.15rem !important;
+      }
+
+      #heroHeader #storeTagline {
+        font-size: 0.66rem;
+        letter-spacing: 0.1em;
+        padding: 0.3rem 0.76rem 0.34rem;
       }
 
       #mainCard {
