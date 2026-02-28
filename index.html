@@ -49,6 +49,7 @@
     }
 
     body {
+      position: relative;
       font-family: 'Outfit', sans-serif;
       color: var(--text);
       background:
@@ -56,6 +57,51 @@
         radial-gradient(800px 420px at 95% 110%, rgba(35, 37, 44, 0.2), transparent 65%),
         linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
       padding-bottom: calc(118px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -22%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      opacity: 0.4;
+      background-image:
+        radial-gradient(circle at 7% 12%, rgba(224, 180, 63, 0.55) 0 1.2px, transparent 1.9px),
+        radial-gradient(circle at 14% 82%, rgba(224, 180, 63, 0.45) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 26% 36%, rgba(221, 180, 88, 0.5) 0 1px, transparent 1.8px),
+        radial-gradient(circle at 34% 64%, rgba(224, 180, 63, 0.45) 0 1.1px, transparent 1.8px),
+        radial-gradient(circle at 43% 22%, rgba(221, 180, 88, 0.42) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 58% 74%, rgba(224, 180, 63, 0.45) 0 1.2px, transparent 1.9px),
+        radial-gradient(circle at 71% 18%, rgba(221, 180, 88, 0.42) 0 1px, transparent 1.8px),
+        radial-gradient(circle at 84% 56%, rgba(224, 180, 63, 0.42) 0 1px, transparent 1.8px),
+        radial-gradient(circle at 93% 86%, rgba(221, 180, 88, 0.45) 0 1px, transparent 1.8px);
+      animation: dotsDrift 34s linear infinite;
+    }
+
+    body::after {
+      opacity: 0.25;
+      background-image:
+        radial-gradient(circle at 9% 67%, rgba(118, 132, 255, 0.55) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 22% 18%, rgba(163, 98, 255, 0.45) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 33% 86%, rgba(118, 132, 255, 0.45) 0 1.1px, transparent 1.8px),
+        radial-gradient(circle at 47% 41%, rgba(163, 98, 255, 0.4) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 64% 82%, rgba(118, 132, 255, 0.45) 0 1px, transparent 1.8px),
+        radial-gradient(circle at 77% 27%, rgba(163, 98, 255, 0.42) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 88% 63%, rgba(118, 132, 255, 0.4) 0 1px, transparent 1.8px);
+      animation: dotsDriftReverse 46s linear infinite;
+    }
+
+    header,
+    main,
+    footer {
+      position: relative;
+      z-index: 1;
     }
 
     body.cart-open {
@@ -67,15 +113,21 @@
     }
 
     .update-banner {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.7rem 0.85rem;
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.8rem 0.85rem;
       margin-bottom: 0.9rem;
       border-radius: 12px;
       border: 1px solid rgba(196, 154, 44, 0.35);
       background: linear-gradient(120deg, rgba(196, 154, 44, 0.14), rgba(196, 154, 44, 0.08));
       color: var(--text);
+    }
+
+    .update-banner-head {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.45rem;
     }
 
     .update-pill {
@@ -92,6 +144,52 @@
       animation: pulseTag 2.2s ease-in-out infinite;
     }
 
+    .update-version,
+    .update-date {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 0.12rem 0.5rem;
+      border: 1px solid rgba(196, 154, 44, 0.35);
+      background: rgba(196, 154, 44, 0.12);
+      color: var(--accent-deep);
+    }
+
+    .update-dismiss {
+      margin-left: auto;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.42);
+      color: var(--muted);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      min-height: 32px;
+      padding: 0.3rem 0.7rem;
+      transition: background-color .2s ease, color .2s ease;
+    }
+
+    .update-dismiss:hover {
+      background: rgba(255, 255, 255, 0.65);
+      color: var(--text);
+    }
+
+    .update-message {
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .update-tips {
+      margin: 0;
+      padding-left: 1.05rem;
+      display: grid;
+      gap: 0.2rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.35;
+    }
+
     @keyframes pulseTag {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.04); }
@@ -105,6 +203,25 @@
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+
+    @keyframes dotsDrift {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(-36px, -52px, 0); }
+    }
+
+    @keyframes dotsDriftReverse {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(42px, -38px, 0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body::before,
+      body::after,
+      .search-shell,
+      .update-pill {
+        animation: none !important;
       }
     }
 
@@ -238,17 +355,44 @@
     }
 
     #themeToggleBtn,
-    #prevBtn,
-    button[onclick="clearFilters()"] {
+    #prevBtn {
       border: 1px solid var(--border);
       background: rgba(34, 36, 44, 0.08) !important;
       color: var(--text) !important;
     }
 
     #themeToggleBtn:hover,
-    #prevBtn:hover,
-    button[onclick="clearFilters()"]:hover {
+    #prevBtn:hover {
       background: rgba(34, 36, 44, 0.14) !important;
+    }
+
+    .search-shell {
+      position: relative;
+      border-radius: 14px;
+      background:
+        linear-gradient(90deg, transparent 0%, rgba(196, 154, 44, 0.24) 50%, transparent 100%) bottom / 210% 1px no-repeat;
+      animation: searchScan 8s linear infinite;
+    }
+
+    @keyframes searchScan {
+      from { background-position: 0 100%; }
+      to { background-position: 210% 100%; }
+    }
+
+    .results-fixed-chip {
+      border: 1px solid var(--border);
+      background: rgba(34, 36, 44, 0.06);
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 0.72rem 0.85rem;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
     }
 
     #statusMessage {
@@ -416,6 +560,19 @@
         padding-bottom: 2rem;
       }
 
+      .update-banner {
+        padding: 0.9rem 1rem;
+      }
+
+      .update-tips {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 1rem;
+      }
+
+      .search-shell {
+        border-radius: 16px;
+      }
+
       #cartToggleBtn {
         bottom: calc(20px + env(safe-area-inset-bottom));
       }
@@ -494,12 +651,25 @@
     <div id="statusMessage" class="hidden text-center mb-4 text-sm font-semibold"></div>
 
     <div class="mb-6">
-      <div class="update-banner">
-        <span class="update-pill">Novidade</span>
-        <p class="text-sm">Busca inteligente atualizada: entende erros de digitacao e termos parecidos.</p>
+      <div id="updateBanner" class="update-banner" role="status" aria-live="polite">
+        <div class="update-banner-head">
+          <span class="update-pill">Novidade</span>
+          <span id="updateVersionTag" class="update-version">Versao -</span>
+          <span id="updateDateTag" class="update-date">Data -</span>
+          <button id="updateBannerDismissBtn" type="button" class="update-dismiss" aria-label="Ocultar aviso de novidade">
+            Ocultar
+          </button>
+        </div>
+        <p class="update-message">Busca semantica atualizada: entende termos com e sem acento, erros de digitacao e variacoes comuns.</p>
+        <ul class="update-tips" aria-label="Boas praticas de busca">
+          <li>Use marca + modelo para resultados mais precisos.</li>
+          <li>Use filtro de categoria para refinar rapidamente.</li>
+          <li>Digite com ou sem acento: o resultado deve ser o mesmo.</li>
+          <li>Se nao achar, tente apenas parte do nome do produto.</li>
+        </ul>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-2">
+      <div class="flex flex-col sm:flex-row gap-2 search-shell">
         <div class="relative flex-1">
           <input type="text" id="searchInput" class="w-full p-4 pl-12 border border-gray-200 rounded-xl shadow-inner text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition min-h-[48px]" placeholder="Digite o nome do produto..." onkeypress="handleKeyPress(event)" />
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -516,22 +686,13 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 mb-6">
       <select id="categoryFilter" class="p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
         <option value="">Categoria: Todas</option>
       </select>
-      <select id="sortBy" class="p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
-        <option value="relevance">Ordenar: Relevancia</option>
-        <option value="price_asc">Preco: Menor primeiro</option>
-        <option value="price_desc">Preco: Maior primeiro</option>
-        <option value="name">Nome (A-Z)</option>
-        <option value="code">Codigo (crescente)</option>
-      </select>
-      <select id="pageSize" class="p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
-        <option value="5">5 por pagina</option>
-        <option value="10" selected>10 por pagina</option>
-      </select>
-      <button onclick="clearFilters()" class="p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-h-[44px]">Limpar filtros</button>
+      <div class="results-fixed-chip" aria-label="Pagina fixa de resultados">
+        5 por pagina
+      </div>
     </div>
 
     <div id="resultsArea" class="space-y-4"><div class="empty-state text-center py-10">Os resultados aparecerao aqui.</div></div>
@@ -620,7 +781,7 @@
 
   <footer class="mt-8 text-xs text-center space-y-1">
     <div>&copy; 2026 Fabiano Acessorios</div>
-    <div id="creatorInfo">Criado por thunderkat12 | WhatsApp: 61995651684</div>
+    <div id="creatorInfo">Desenvolvido por Daniel Victor | Sistemas & Automações | WhatsApp: (61) 9 9565-1684</div>
   </footer>
 
   <script>
@@ -632,6 +793,10 @@
     const SEARCH_HISTORY_KEY = 'fabiano_search_history_v1';
     const THEME_KEY = 'fabiano_theme_v1';
     const WARNING_LOG_KEY = 'fabiano_warning_logs_v1';
+    const RELEASE_VERSION = 'v1.3.0';
+    const RELEASE_DATE = '28 fev 2026';
+    const RELEASE_DISMISS_KEY = `fabiano_release_dismissed_${RELEASE_VERSION}`;
+    const RESULTS_PER_PAGE = 5;
     const MAX_RECENT_SEARCHES = 8;
     const MAX_WARNING_LOGS = 120;
     const MAX_CART_ITEMS_SOFT_LIMIT = 300;
@@ -643,12 +808,21 @@
       ifone: 'iphone',
       ifon: 'iphone',
       iphne: 'iphone',
+      saiomi: 'xiaomi',
+      xaiomi: 'xiaomi',
+      shaomi: 'xiaomi',
+      xiaomy: 'xiaomi',
+      xiomi: 'xiaomi',
+      xioami: 'xiaomi',
+      xiami: 'xiaomi',
+      xaomi: 'xiaomi',
+      xiaomise: 'xiaomi',
     };
     const PUBLIC_CONFIG_DEFAULT = {
       store_name: 'Busca Inteligente de Produtos',
       store_tagline: 'Busca com filtros, paginacao e carrinho persistente.',
-      creator_name: 'thunderkat12',
-      creator_whatsapp: '61995651684',
+      creator_name: 'Desenvolvido por Daniel Victor | Sistemas & Automações',
+      creator_whatsapp: '(61) 9 9565-1684',
     };
     const ORDER_CONFIG_DEFAULT = {
       api_base_url: '',
@@ -677,6 +851,7 @@
     window.onload = async function () {
       loadTheme();
       applyTheme();
+      initUpdateBanner();
       loadCart();
       loadDeliveryAddress();
       loadDeliveryRegion();
@@ -699,6 +874,28 @@
       loadPaymentState();
       renderCart();
     };
+
+    function initUpdateBanner() {
+      const banner = document.getElementById('updateBanner');
+      if (!banner) return;
+
+      const versionTag = document.getElementById('updateVersionTag');
+      const dateTag = document.getElementById('updateDateTag');
+      const dismissBtn = document.getElementById('updateBannerDismissBtn');
+
+      if (versionTag) versionTag.textContent = `Versao ${RELEASE_VERSION}`;
+      if (dateTag) dateTag.textContent = RELEASE_DATE;
+
+      const dismissed = localStorage.getItem(RELEASE_DISMISS_KEY) === '1';
+      banner.classList.toggle('hidden', dismissed);
+
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          banner.classList.add('hidden');
+          localStorage.setItem(RELEASE_DISMISS_KEY, '1');
+        });
+      }
+    }
 
     function getBaseUrl() { return String(orderConfig.api_base_url || '').trim().replace(/\/$/, ''); }
     function buildApiUrl(path) { const baseUrl = getBaseUrl(); return baseUrl ? `${baseUrl}${path}` : path; }
@@ -951,14 +1148,10 @@
       lastQuery = '';
       const input = document.getElementById('searchInput');
       const category = document.getElementById('categoryFilter');
-      const sortBy = document.getElementById('sortBy');
-      const pageSize = document.getElementById('pageSize');
       const resultsArea = document.getElementById('resultsArea');
       const paginationArea = document.getElementById('paginationArea');
       if (input) input.value = '';
       if (category) category.value = '';
-      if (sortBy) sortBy.value = 'relevance';
-      if (pageSize) pageSize.value = '10';
       if (resultsArea) resultsArea.innerHTML = '<div class="empty-state text-center py-10">Os resultados aparecerao aqui.</div>';
       if (paginationArea) paginationArea.classList.add('hidden');
     }
@@ -1055,7 +1248,9 @@
     function applyBranding() {
       document.getElementById('storeName').textContent = publicConfig.store_name || PUBLIC_CONFIG_DEFAULT.store_name;
       document.getElementById('storeTagline').textContent = publicConfig.store_tagline || PUBLIC_CONFIG_DEFAULT.store_tagline;
-      document.getElementById('creatorInfo').textContent = `Criado por ${publicConfig.creator_name || PUBLIC_CONFIG_DEFAULT.creator_name} | WhatsApp: ${publicConfig.creator_whatsapp || PUBLIC_CONFIG_DEFAULT.creator_whatsapp}`;
+      const creatorName = String(publicConfig.creator_name || PUBLIC_CONFIG_DEFAULT.creator_name).trim();
+      const creatorWhatsapp = String(publicConfig.creator_whatsapp || PUBLIC_CONFIG_DEFAULT.creator_whatsapp || '').trim();
+      document.getElementById('creatorInfo').textContent = creatorWhatsapp ? `${creatorName} | WhatsApp: ${creatorWhatsapp}` : creatorName;
     }
 
     async function loadPublicConfig() {
@@ -1108,17 +1303,9 @@
     }
 
     function handleKeyPress(e) { if (e.key === 'Enter') searchProducts(true); }
-    function clearFilters() {
-      document.getElementById('categoryFilter').value = '';
-      document.getElementById('sortBy').value = 'relevance';
-      document.getElementById('pageSize').value = '10';
-      if (lastQuery) searchProducts(true);
-    }
 
     function attachSearchListeners() {
       document.getElementById('categoryFilter').addEventListener('change', () => { if (lastQuery) searchProducts(true); });
-      document.getElementById('sortBy').addEventListener('change', () => { if (lastQuery) searchProducts(true); });
-      document.getElementById('pageSize').addEventListener('change', () => { if (lastQuery) searchProducts(true); });
     }
     async function searchProducts(resetOffset = true) {
       const query = document.getElementById('searchInput').value.trim();
@@ -1130,14 +1317,13 @@
       const resultsArea = document.getElementById('resultsArea');
       const paginationArea = document.getElementById('paginationArea');
       const category = document.getElementById('categoryFilter').value;
-      const sortBy = document.getElementById('sortBy').value;
-      const limit = parseInt(document.getElementById('pageSize').value, 10);
+      const limit = RESULTS_PER_PAGE;
 
       resultsArea.innerHTML = '<div class="loading-state text-center py-10"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div><p class="mt-2">Buscando...</p></div>';
       paginationArea.classList.add('hidden');
 
       try {
-        const params = new URLSearchParams({ query, sort_by: sortBy, limit: String(limit), offset: String(currentOffset) });
+        const params = new URLSearchParams({ query, limit: String(limit), offset: String(currentOffset) });
         if (category) params.append('category', category);
 
         const response = await fetch(buildApiUrlWithStore('/search', params));
@@ -1188,17 +1374,18 @@
           resultsArea.appendChild(item);
         });
 
-        updatePagination(limit);
+        updatePagination();
       } catch (error) {
         resultsArea.innerHTML = `<div class="error-state text-center py-10">Erro ao buscar: ${error.message}</div>`;
       }
     }
 
-    function updatePagination(limit) {
+    function updatePagination() {
       const paginationArea = document.getElementById('paginationArea');
       const prevBtn = document.getElementById('prevBtn');
       const nextBtn = document.getElementById('nextBtn');
       const pageInfo = document.getElementById('pageInfo');
+      const limit = RESULTS_PER_PAGE;
       if (lastTotal <= 0) { paginationArea.classList.add('hidden'); return; }
       const currentPage = Math.floor(currentOffset / limit) + 1;
       const totalPages = Math.max(1, Math.ceil(lastTotal / limit));
@@ -1209,14 +1396,14 @@
     }
 
     function prevPage() {
-      const limit = parseInt(document.getElementById('pageSize').value, 10);
+      const limit = RESULTS_PER_PAGE;
       if (currentOffset <= 0) return;
       currentOffset = Math.max(0, currentOffset - limit);
       searchProducts(false);
     }
 
     function nextPage() {
-      const limit = parseInt(document.getElementById('pageSize').value, 10);
+      const limit = RESULTS_PER_PAGE;
       if (currentOffset + limit >= lastTotal) return;
       currentOffset += limit;
       searchProducts(false);

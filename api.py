@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 from pathlib import Path
 from threading import Lock, Thread
 
@@ -37,8 +38,8 @@ SETTINGS_FILE = Path("app_settings.json")
 LEGACY_PRODUCTS_FILE = LEGACY_STORE_DIR / "products.json"
 LEGACY_SETTINGS_FILE = LEGACY_STORE_DIR / "settings.json"
 
-CREATOR_NAME = "thunderkat12"
-CREATOR_WHATSAPP = "61995651684"
+CREATOR_NAME = os.getenv("CREATOR_NAME", "Desenvolvido por Daniel Victor | Sistemas & Automações").strip()
+CREATOR_WHATSAPP = os.getenv("CREATOR_WHATSAPP", "(61) 9 9565-1684").strip()
 ADMIN_USER = os.getenv("ADMIN_USER", os.getenv("MASTER_USER", "admin")).strip().lower() or "admin"
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", os.getenv("MASTER_PASSWORD", "daniel142536"))
 ADMIN_TOKEN_TTL_SECONDS = int(os.getenv("ADMIN_TOKEN_TTL_SECONDS", "28800"))
@@ -133,6 +134,15 @@ TERM_NORMALIZATION_MAP = {
     "fone": "fone",
     "pelicula": "pelicula",
     "peliculaa": "pelicula",
+    "saiomi": "xiaomi",
+    "xaiomi": "xiaomi",
+    "shaomi": "xiaomi",
+    "xiaomy": "xiaomi",
+    "xiomi": "xiaomi",
+    "xioami": "xiaomi",
+    "xiami": "xiaomi",
+    "xaomi": "xiaomi",
+    "xiaomise": "xiaomi",
 }
 
 CATEGORY_RULES = [
@@ -643,7 +653,10 @@ def normalize_product_list(raw_products: list[Any], stock_by_id: Optional[dict[s
 
 
 def normalize_text(value: str) -> str:
-    cleaned = NON_WORD_PATTERN.sub(" ", str(value).lower().strip())
+    text = str(value or "")
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+    cleaned = NON_WORD_PATTERN.sub(" ", text.lower().strip())
     return " ".join(cleaned.split())
 
 

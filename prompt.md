@@ -1,7 +1,7 @@
 # API de Busca de Produtos - Estado Atual
 
 Documento de referencia do projeto `Fabiano_Acessorios`.
-Status consolidado em **27/02/2026**.
+Status consolidado em **28/02/2026**.
 
 ---
 
@@ -52,9 +52,13 @@ Aplicacao web para:
 ### Busca inteligente (`GET /search`)
 
 - Tokenizacao e normalizacao de texto.
+- Busca agora ignora acentos (ex.: `pelicula` = `pelicula` com acento).
 - Remove termos pouco relevantes na consulta (ex.: `de`, `do`, `da`, etc.).
 - Mapa de sinonimos (ex.: `ip` <-> `iphone`, `sam` <-> `samsung`).
 - Normalizacao de erros comuns de digitacao (ex.: `diplsay` -> `display`, `ifone` -> `iphone`).
+- Normalizacao para Xiaomi/XM com erros comuns:
+  - `saiomi`, `xaiomi`, `shaomi`, `xiaomy`, `xiomi`, `xioami`, `xiami`, `xaomi`, `xiaomise` -> `xiaomi`.
+  - Alias `xm` <-> `xiaomi` mantido.
 - Ranking por relevancia com pesos por:
   - match exato de palavra;
   - prefixo de palavra;
@@ -80,14 +84,22 @@ Aplicacao web para:
 
 ### Frontend da loja (`index.html`)
 
-- Busca com filtros e ordenacao.
-- Paginacao com opcoes 5 ou 10 por pagina.
+- Busca simplificada (mobile-first) com foco no essencial.
+- Filtros publicos atuais:
+  - categoria;
+  - paginacao fixa em **5** resultados por pagina.
+- Ordenacao manual e botao "limpar filtros" removidos da UI publica.
 - Carrinho com persistencia local.
 - Envio de pedido por WhatsApp:
   - gera protocolo de pedido;
   - limpa estado local apos envio;
   - fallback para mobile (`window.location`) se popup falhar.
-- Tema visual atualizado (claro/escuro) com novo design.
+- Tema visual atualizado (claro/escuro), com:
+  - banner de novidade com versao/data/boas praticas e opcao de ocultar por versao;
+  - efeito leve de "scan" na area de busca;
+  - efeito de pontinhos animados no fundo (com respeito a `prefers-reduced-motion`).
+- Rodape atualizado para:
+  - `Desenvolvido por Daniel Victor | Sistemas & Automacoes | WhatsApp: (61) 9 9565-1684`.
 
 ### Painel admin (`gerenciador.html`)
 
@@ -136,6 +148,8 @@ Fluxo de atualizacao de catalogo:
 - `ADMIN_LOGIN_BLOCK_SECONDS` (padrao: `900`)
 - `MANAGER_ENTRY_KEY` (padrao: `Daniel@qwe`)
 - `SEARCH_CACHE_MAX_SIZE` (padrao: `128`)
+- `CREATOR_NAME` (padrao atualizado no backend)
+- `CREATOR_WHATSAPP` (padrao: `(61) 9 9565-1684`)
 - `STORE_NAME`, `STORE_TAGLINE`, `API_BASE_URL`
 - `ORDER_WHATSAPP_NUMBER`
 - `ORDER_COUPON_TITLE`, `ORDER_COUPON_MESSAGE`, `ORDER_COUPON_ADDRESS`, `ORDER_COUPON_FOOTER`
@@ -167,6 +181,14 @@ uvicorn api:app --reload
 
 ## 6) Onde paramos (ultimos commits)
 
+0. **Alteracoes locais em 28/02/2026 (agora consolidadas)**  
+   - Busca semantica com suporte completo a acentos (`pelicula`/`pelicula` com acento).  
+   - Normalizacao Xiaomi/XM para erros de digitacao (`saiomi`, `xaiomi`, etc.).  
+   - Loja publica simplificada (categoria + 5 por pagina fixo).  
+   - Remocao de ordenacao manual e botao de limpar filtros na UI publica.  
+   - Banner de release com versao/data/boas praticas e opcao de ocultar.  
+   - Efeitos visuais leves (scan + pontinhos em movimento) sem impacto pesado.  
+   - Branding/contato atualizados para Daniel Victor.
 1. `c61b260` (2026-02-27)  
    UI da loja: faixa de novidade da busca inteligente, destaque visual de termos buscados e micro-animacao de entrada dos cards.
 2. `ae25143` (2026-02-27)  
