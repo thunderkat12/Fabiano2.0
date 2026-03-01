@@ -52,6 +52,87 @@
       border: 1px solid #cbd5e1;
       background: #f8fafc;
     }
+    .theme-preset-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 10px;
+      text-align: left;
+      transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+    .theme-preset-card:hover {
+      border-color: #818cf8;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+      transform: translateY(-1px);
+    }
+    .theme-preset-card.active {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    }
+    .theme-preset-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .theme-preset-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .theme-preset-action {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #4338ca;
+      background: #eef2ff;
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+    .theme-preset-description {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+    .theme-preset-swatches {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .theme-preset-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 23, 42, 0.2);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      flex: 0 0 auto;
+    }
+    .theme-input-wrap {
+      position: relative;
+    }
+    .theme-color-preview {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 23, 42, 0.22);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
+      pointer-events: none;
+    }
+    .theme-field-help {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.35;
+      margin-top: 4px;
+    }
     @keyframes fadePanel {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
@@ -249,17 +330,153 @@
                 </label>
               </div>
               <div class="md:col-span-2 border rounded-lg p-3 bg-slate-50 space-y-2">
-                <p class="text-xs font-semibold text-slate-700">Cores da vitrine (opcional)</p>
-                <p class="text-[11px] text-slate-500">Use formato HEX (#RRGGBB). Deixe vazio para manter o padrao.</p>
+                <div class="space-y-1">
+                  <p class="text-xs font-semibold text-slate-700">Cores da vitrine (opcional)</p>
+                  <p class="text-[11px] text-slate-500">Use formato HEX (#RRGGBB). Deixe vazio para manter o padrao atual.</p>
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p class="text-[11px] font-semibold text-slate-700 uppercase tracking-[0.08em]">Paletas sugeridas</p>
+                    <button id="clearThemeColorsBtn" type="button" class="px-3 py-1.5 text-xs text-slate-700 border border-slate-300 rounded hover:bg-white transition min-h-[36px] self-start">Limpar personalizacao</button>
+                  </div>
+                  <div id="themePresetList" class="grid grid-cols-1 xl:grid-cols-2 gap-2">
+                    <button type="button" class="theme-preset-card" data-theme-preset="dourado-premium">
+                      <div class="theme-preset-head">
+                        <span class="theme-preset-name">Dourado premium (padrao)</span>
+                        <span class="theme-preset-action">Aplicar</span>
+                      </div>
+                      <p class="theme-preset-description">Mantem o visual atual elegante com destaque dourado.</p>
+                      <div class="theme-preset-swatches">
+                        <span class="theme-preset-swatch" style="background:#efebe4"></span>
+                        <span class="theme-preset-swatch" style="background:#f8f5ef"></span>
+                        <span class="theme-preset-swatch" style="background:#ffffff"></span>
+                        <span class="theme-preset-swatch" style="background:#141414"></span>
+                        <span class="theme-preset-swatch" style="background:#5f5b55"></span>
+                        <span class="theme-preset-swatch" style="background:#c49a2c"></span>
+                        <span class="theme-preset-swatch" style="background:#e0b43f"></span>
+                        <span class="theme-preset-swatch" style="background:#9d7520"></span>
+                      </div>
+                    </button>
+                    <button type="button" class="theme-preset-card" data-theme-preset="azul-profissional">
+                      <div class="theme-preset-head">
+                        <span class="theme-preset-name">Azul profissional</span>
+                        <span class="theme-preset-action">Aplicar</span>
+                      </div>
+                      <p class="theme-preset-description">Visual limpo e comercial, com destaque azul moderno.</p>
+                      <div class="theme-preset-swatches">
+                        <span class="theme-preset-swatch" style="background:#eaf1fb"></span>
+                        <span class="theme-preset-swatch" style="background:#f4f8ff"></span>
+                        <span class="theme-preset-swatch" style="background:#ffffff"></span>
+                        <span class="theme-preset-swatch" style="background:#0f172a"></span>
+                        <span class="theme-preset-swatch" style="background:#475569"></span>
+                        <span class="theme-preset-swatch" style="background:#2563eb"></span>
+                        <span class="theme-preset-swatch" style="background:#3b82f6"></span>
+                        <span class="theme-preset-swatch" style="background:#1d4ed8"></span>
+                      </div>
+                    </button>
+                    <button type="button" class="theme-preset-card" data-theme-preset="verde-confianca">
+                      <div class="theme-preset-head">
+                        <span class="theme-preset-name">Verde confianca</span>
+                        <span class="theme-preset-action">Aplicar</span>
+                      </div>
+                      <p class="theme-preset-description">Passa seguranca e combina bem com segmentos tecnicos.</p>
+                      <div class="theme-preset-swatches">
+                        <span class="theme-preset-swatch" style="background:#ebf5ef"></span>
+                        <span class="theme-preset-swatch" style="background:#f5fbf7"></span>
+                        <span class="theme-preset-swatch" style="background:#ffffff"></span>
+                        <span class="theme-preset-swatch" style="background:#10231b"></span>
+                        <span class="theme-preset-swatch" style="background:#4f6b5d"></span>
+                        <span class="theme-preset-swatch" style="background:#1f8a5b"></span>
+                        <span class="theme-preset-swatch" style="background:#2ea56f"></span>
+                        <span class="theme-preset-swatch" style="background:#136a44"></span>
+                      </div>
+                    </button>
+                    <button type="button" class="theme-preset-card" data-theme-preset="grafite-ouro">
+                      <div class="theme-preset-head">
+                        <span class="theme-preset-name">Grafite + ouro</span>
+                        <span class="theme-preset-action">Aplicar</span>
+                      </div>
+                      <p class="theme-preset-description">Neutro sofisticado, com contraste forte para botao e destaque.</p>
+                      <div class="theme-preset-swatches">
+                        <span class="theme-preset-swatch" style="background:#ece8e1"></span>
+                        <span class="theme-preset-swatch" style="background:#f7f4ee"></span>
+                        <span class="theme-preset-swatch" style="background:#ffffff"></span>
+                        <span class="theme-preset-swatch" style="background:#171717"></span>
+                        <span class="theme-preset-swatch" style="background:#57534e"></span>
+                        <span class="theme-preset-swatch" style="background:#9a7a42"></span>
+                        <span class="theme-preset-swatch" style="background:#b79252"></span>
+                        <span class="theme-preset-swatch" style="background:#70552a"></span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input id="cfgThemeBg" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Fundo principal (#efebe4)" />
-                  <input id="cfgThemeBgAlt" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Fundo alternativo (#f8f5ef)" />
-                  <input id="cfgThemeSurface" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Cards/superficie (#ffffff)" />
-                  <input id="cfgThemeText" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Texto principal (#141414)" />
-                  <input id="cfgThemeMuted" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Texto secundario (#5f5b55)" />
-                  <input id="cfgThemeAccent" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Cor destaque (#c49a2c)" />
-                  <input id="cfgThemeAccentStrong" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Destaque forte (#e0b43f)" />
-                  <input id="cfgThemeAccentDeep" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Destaque profundo (#9d7520)" />
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeBg">Fundo principal</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeBg" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#efebe4" />
+                      <span id="cfgThemeBgPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Altera o inicio do degrade de fundo da loja.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeBgAlt">Fundo alternativo</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeBgAlt" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#f8f5ef" />
+                      <span id="cfgThemeBgAltPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Altera o fim do degrade de fundo da loja.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeSurface">Cards/superficie</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeSurface" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#ffffff" />
+                      <span id="cfgThemeSurfacePreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Muda o fundo dos cards, blocos e campos da vitrine.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeText">Texto principal</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeText" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#141414" />
+                      <span id="cfgThemeTextPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Define a cor de titulos e textos fortes.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeMuted">Texto secundario</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeMuted" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#5f5b55" />
+                      <span id="cfgThemeMutedPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Afeta subtitulos, dicas e informacoes auxiliares.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeAccent">Cor destaque</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeAccent" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#c49a2c" />
+                      <span id="cfgThemeAccentPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Define o destaque base dos botoes e foco dos campos.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeAccentStrong">Destaque forte</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeAccentStrong" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#e0b43f" />
+                      <span id="cfgThemeAccentStrongPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Parte clara do degrade dos botoes principais.</p>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-600" for="cfgThemeAccentDeep">Destaque profundo</label>
+                    <div class="theme-input-wrap">
+                      <input id="cfgThemeAccentDeep" type="text" class="w-full p-2 pr-11 border rounded min-h-[40px]" placeholder="#9d7520" />
+                      <span id="cfgThemeAccentDeepPreview" class="theme-color-preview" title="Sem cor personalizada"></span>
+                    </div>
+                    <p class="theme-field-help">Parte escura do degrade e detalhes de destaque.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -366,12 +583,78 @@
       xaomi: 'xiaomi',
       xiaomise: 'xiaomi',
     };
+    const THEME_FIELDS = [
+      { key: 'theme_bg', inputId: 'cfgThemeBg', previewId: 'cfgThemeBgPreview' },
+      { key: 'theme_bg_alt', inputId: 'cfgThemeBgAlt', previewId: 'cfgThemeBgAltPreview' },
+      { key: 'theme_surface', inputId: 'cfgThemeSurface', previewId: 'cfgThemeSurfacePreview' },
+      { key: 'theme_text', inputId: 'cfgThemeText', previewId: 'cfgThemeTextPreview' },
+      { key: 'theme_muted', inputId: 'cfgThemeMuted', previewId: 'cfgThemeMutedPreview' },
+      { key: 'theme_accent', inputId: 'cfgThemeAccent', previewId: 'cfgThemeAccentPreview' },
+      { key: 'theme_accent_strong', inputId: 'cfgThemeAccentStrong', previewId: 'cfgThemeAccentStrongPreview' },
+      { key: 'theme_accent_deep', inputId: 'cfgThemeAccentDeep', previewId: 'cfgThemeAccentDeepPreview' },
+    ];
+    const THEME_PRESETS = {
+      'dourado-premium': {
+        label: 'Dourado premium',
+        colors: {
+          theme_bg: '#efebe4',
+          theme_bg_alt: '#f8f5ef',
+          theme_surface: '#ffffff',
+          theme_text: '#141414',
+          theme_muted: '#5f5b55',
+          theme_accent: '#c49a2c',
+          theme_accent_strong: '#e0b43f',
+          theme_accent_deep: '#9d7520',
+        },
+      },
+      'azul-profissional': {
+        label: 'Azul profissional',
+        colors: {
+          theme_bg: '#eaf1fb',
+          theme_bg_alt: '#f4f8ff',
+          theme_surface: '#ffffff',
+          theme_text: '#0f172a',
+          theme_muted: '#475569',
+          theme_accent: '#2563eb',
+          theme_accent_strong: '#3b82f6',
+          theme_accent_deep: '#1d4ed8',
+        },
+      },
+      'verde-confianca': {
+        label: 'Verde confianca',
+        colors: {
+          theme_bg: '#ebf5ef',
+          theme_bg_alt: '#f5fbf7',
+          theme_surface: '#ffffff',
+          theme_text: '#10231b',
+          theme_muted: '#4f6b5d',
+          theme_accent: '#1f8a5b',
+          theme_accent_strong: '#2ea56f',
+          theme_accent_deep: '#136a44',
+        },
+      },
+      'grafite-ouro': {
+        label: 'Grafite + ouro',
+        colors: {
+          theme_bg: '#ece8e1',
+          theme_bg_alt: '#f7f4ee',
+          theme_surface: '#ffffff',
+          theme_text: '#171717',
+          theme_muted: '#57534e',
+          theme_accent: '#9a7a42',
+          theme_accent_strong: '#b79252',
+          theme_accent_deep: '#70552a',
+        },
+      },
+    };
+    const THEME_PREVIEW_EMPTY_BACKGROUND = 'linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%)';
 
     window.onload = async function () {
       document.getElementById('loginUser').value = '';
       initAdminSidebar();
       switchAdminSection('dashboard');
       setupPdfUploadHandlers();
+      initThemeAppearanceTools();
       clearProductForm();
       const logoPreview = document.getElementById('cfgStoreLogoPreview');
       if (logoPreview) {
@@ -431,6 +714,112 @@
     function toBool(value) {
       const text = String(value ?? '').trim().toLowerCase();
       return ['1', 'true', 'yes', 'sim', 'on'].includes(text);
+    }
+
+    function normalizeHexColor(value) {
+      const text = String(value || '').trim().toLowerCase();
+      if (!text) return '';
+      if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/.test(text)) return text;
+      return '';
+    }
+
+    function getThemeValuesFromForm() {
+      const values = {};
+      THEME_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        values[field.key] = String(input ? input.value : '').trim();
+      });
+      return values;
+    }
+
+    function updateThemeColorPreviews() {
+      THEME_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        const preview = document.getElementById(field.previewId);
+        if (!input || !preview) return;
+        const normalized = normalizeHexColor(input.value);
+        if (normalized) {
+          preview.style.background = normalized;
+          preview.title = normalized.toUpperCase();
+        } else {
+          preview.style.background = THEME_PREVIEW_EMPTY_BACKGROUND;
+          preview.title = 'Sem cor personalizada';
+        }
+      });
+    }
+
+    function themeValuesMatchPreset(presetColors, currentValues) {
+      if (!presetColors || !currentValues) return false;
+      return THEME_FIELDS.every((field) => {
+        const expected = normalizeHexColor(presetColors[field.key]);
+        const current = normalizeHexColor(currentValues[field.key]);
+        return expected === current;
+      });
+    }
+
+    function refreshActiveThemePreset() {
+      const currentValues = getThemeValuesFromForm();
+      document.querySelectorAll('.theme-preset-card[data-theme-preset]').forEach((button) => {
+        const presetId = String(button.dataset.themePreset || '');
+        const preset = THEME_PRESETS[presetId];
+        const active = Boolean(preset) && themeValuesMatchPreset(preset.colors, currentValues);
+        button.classList.toggle('active', active);
+      });
+    }
+
+    function applyThemePresetById(presetId) {
+      const preset = THEME_PRESETS[String(presetId || '')];
+      if (!preset) return;
+      THEME_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (!input) return;
+        input.value = String(preset.colors[field.key] || '');
+      });
+      updateThemeColorPreviews();
+      refreshActiveThemePreset();
+      setStatus(`Paleta "${preset.label}" aplicada. Clique em "Salvar aparencia" para publicar.`, 'ok');
+    }
+
+    function clearThemeColors() {
+      THEME_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (!input) return;
+        input.value = '';
+      });
+      updateThemeColorPreviews();
+      refreshActiveThemePreset();
+      setStatus('Cores personalizadas limpas. Salve para voltar ao padrao da vitrine.', 'neutral');
+    }
+
+    function handleThemeFieldInput() {
+      updateThemeColorPreviews();
+      refreshActiveThemePreset();
+    }
+
+    function initThemeAppearanceTools() {
+      THEME_FIELDS.forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (!input) return;
+        input.addEventListener('input', handleThemeFieldInput);
+        input.addEventListener('blur', () => {
+          const normalized = normalizeHexColor(input.value);
+          input.value = normalized ? normalized.toUpperCase() : String(input.value || '').trim();
+          handleThemeFieldInput();
+        });
+      });
+
+      const clearBtn = document.getElementById('clearThemeColorsBtn');
+      if (clearBtn) clearBtn.addEventListener('click', clearThemeColors);
+
+      document.querySelectorAll('.theme-preset-card[data-theme-preset]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const presetId = String(button.dataset.themePreset || '');
+          applyThemePresetById(presetId);
+        });
+      });
+
+      updateThemeColorPreviews();
+      refreshActiveThemePreset();
     }
 
     function updateDashboardCards() {
@@ -1059,6 +1448,8 @@
       document.getElementById('cfgCouponAddress').value = cfg.coupon_address || '';
       document.getElementById('cfgCouponFooter').value = cfg.coupon_footer || '';
       renderStoreLogoPreview();
+      updateThemeColorPreviews();
+      refreshActiveThemePreset();
       updateDashboardCards();
     }
 
