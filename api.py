@@ -37,6 +37,9 @@ PRODUCTS_FILE = Path("products.json")
 SETTINGS_FILE = Path("app_settings.json")
 LEGACY_PRODUCTS_FILE = LEGACY_STORE_DIR / "products.json"
 LEGACY_SETTINGS_FILE = LEGACY_STORE_DIR / "settings.json"
+MEDIA_DIR = DATA_DIR / "media"
+MEDIA_LOGOS_DIR = MEDIA_DIR / "logos"
+MEDIA_PRODUCTS_DIR = MEDIA_DIR / "products"
 
 CREATOR_NAME = os.getenv("CREATOR_NAME", "Desenvolvido por Daniel Victor | Sistemas & Automações").strip()
 CREATOR_WHATSAPP = os.getenv("CREATOR_WHATSAPP", "(61) 9 9565-1684").strip()
@@ -82,9 +85,15 @@ PDF_UPLOAD_CHUNK_SIZE = max(64 * 1024, int(os.getenv("PDF_UPLOAD_CHUNK_SIZE", st
 PDF_JOB_RETENTION_SECONDS = max(300, int(os.getenv("PDF_JOB_RETENTION_SECONDS", "3600")))
 PDF_JOB_MAX_ENTRIES = max(10, int(os.getenv("PDF_JOB_MAX_ENTRIES", "50")))
 PDF_PROCESS_TIMEOUT_SECONDS = max(60, int(os.getenv("PDF_PROCESS_TIMEOUT_SECONDS", "900")))
+IMAGE_UPLOAD_MAX_BYTES = max(256 * 1024, int(os.getenv("IMAGE_UPLOAD_MAX_BYTES", str(5 * 1024 * 1024))))
+IMAGE_UPLOAD_CHUNK_SIZE = max(64 * 1024, int(os.getenv("IMAGE_UPLOAD_CHUNK_SIZE", str(512 * 1024))))
 
 NON_WORD_PATTERN = re.compile(r"[^\w\s]")
 DIGITS_PATTERN = re.compile(r"\D")
+HEX_COLOR_PATTERN = re.compile(r"^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$")
+
+for _media_dir in (MEDIA_DIR, MEDIA_LOGOS_DIR, MEDIA_PRODUCTS_DIR):
+    _media_dir.mkdir(parents=True, exist_ok=True)
 
 SYNONYM_MAP = {
     "ip": "iphone",
@@ -238,6 +247,16 @@ def build_default_delivery_fee_rules() -> str:
 DEFAULT_SETTINGS = {
     "store_name": os.getenv("STORE_NAME", "Busca Inteligente de Produtos"),
     "store_tagline": os.getenv("STORE_TAGLINE", "Busca com filtros, paginacao e carrinho persistente."),
+    "store_logo_url": os.getenv("STORE_LOGO_URL", "").strip(),
+    "show_product_images": os.getenv("SHOW_PRODUCT_IMAGES", "1").strip(),
+    "theme_bg": os.getenv("THEME_BG", "").strip(),
+    "theme_bg_alt": os.getenv("THEME_BG_ALT", "").strip(),
+    "theme_surface": os.getenv("THEME_SURFACE", "").strip(),
+    "theme_text": os.getenv("THEME_TEXT", "").strip(),
+    "theme_muted": os.getenv("THEME_MUTED", "").strip(),
+    "theme_accent": os.getenv("THEME_ACCENT", "").strip(),
+    "theme_accent_strong": os.getenv("THEME_ACCENT_STRONG", "").strip(),
+    "theme_accent_deep": os.getenv("THEME_ACCENT_DEEP", "").strip(),
     "api_base_url": os.getenv("API_BASE_URL", "").strip(),
     "whatsapp_number": env_text("ORDER_WHATSAPP_NUMBER", ""),
     "coupon_title": env_text("ORDER_COUPON_TITLE", "CUPOM DE PEDIDO"),
@@ -249,12 +268,71 @@ DEFAULT_SETTINGS = {
     "delivery_fee_rules": build_default_delivery_fee_rules(),
 }
 ALLOWED_SETTING_KEYS = set(DEFAULT_SETTINGS.keys())
+THEME_COLOR_KEYS = {
+    "theme_bg",
+    "theme_bg_alt",
+    "theme_surface",
+    "theme_text",
+    "theme_muted",
+    "theme_accent",
+    "theme_accent_strong",
+    "theme_accent_deep",
+}
+
+
+def normalize_bool_setting(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"1", "true", "yes", "sim", "on"}:
+        return "1"
+    if text in {"0", "false", "no", "nao", "off", ""}:
+        return "0"
+    raise HTTPException(status_code=400, detail="Valor booleano invalido")
+
+
+def bool_setting_value(value: Any) -> bool:
+    try:
+        return normalize_bool_setting(value) == "1"
+    except HTTPException:
+        return False
+
+
+def normalize_hex_color_setting(value: Any, field_name: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if not HEX_COLOR_PATTERN.fullmatch(text):
+        raise HTTPException(status_code=400, detail=f"{field_name} invalido. Use formato HEX como #AABBCC.")
+    return text.lower()
+
+
+def normalize_optional_media_url(value: Any, field_name: str, *, strict: bool = True) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if len(text) > 500:
+        if strict:
+            raise HTTPException(status_code=400, detail=f"{field_name} excede o limite de 500 caracteres")
+        return ""
+    if re.match(r"^https?://", text, flags=re.IGNORECASE) or text.startswith("/"):
+        return text
+    if strict:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{field_name} invalido. Use URL http(s) ou caminho iniciado por '/'.",
+        )
+    return ""
 
 
 def normalize_setting_value(key: str, value: Any) -> str:
     text = str(value).replace("\r\n", "\n").strip()
     if key == "api_base_url":
         return text.rstrip("/")
+    if key in THEME_COLOR_KEYS:
+        return normalize_hex_color_setting(value, key)
+    if key == "store_logo_url":
+        return normalize_optional_media_url(value, "store_logo_url", strict=True)
+    if key == "show_product_images":
+        return normalize_bool_setting(value)
     if key == "delivery_fee_amount":
         if not text:
             return "0.00"
@@ -586,7 +664,11 @@ def normalize_product_id(value: Any) -> str:
     return text
 
 
-def normalize_product_record(raw: Any, fallback_stock: Optional[int] = None) -> dict[str, Any]:
+def normalize_product_record(
+    raw: Any,
+    fallback_stock: Optional[int] = None,
+    fallback_image_url: Optional[str] = None,
+) -> dict[str, Any]:
     payload = raw if isinstance(raw, dict) else {}
     product_id = str(payload.get("id", "")).strip()
     description = str(payload.get("description", "")).strip()
@@ -611,6 +693,11 @@ def normalize_product_record(raw: Any, fallback_stock: Optional[int] = None) -> 
         price_wholesale = normalize_price_text(payload.get("price_wholesale", "0"), "price_wholesale")
     except HTTPException:
         price_wholesale = "0.00"
+    image_url = normalize_optional_media_url(
+        payload.get("image_url", fallback_image_url if fallback_image_url is not None else ""),
+        "image_url",
+        strict=False,
+    )
 
     return {
         "id": product_id,
@@ -620,6 +707,7 @@ def normalize_product_record(raw: Any, fallback_stock: Optional[int] = None) -> 
         "price_term": price_term,
         "price_wholesale": price_wholesale,
         "stock": stock,
+        "image_url": image_url,
     }
 
 
@@ -636,14 +724,33 @@ def build_existing_stock_map(products: list[dict[str, Any]]) -> dict[str, int]:
     return stock_by_id
 
 
-def normalize_product_list(raw_products: list[Any], stock_by_id: Optional[dict[str, int]] = None) -> list[dict[str, Any]]:
+def build_existing_image_url_map(products: list[dict[str, Any]]) -> dict[str, str]:
+    image_url_by_id: dict[str, str] = {}
+    for item in products:
+        product_id = str(item.get("id", "")).strip()
+        if not product_id:
+            continue
+        image_url_by_id[product_id] = normalize_optional_media_url(item.get("image_url", ""), "image_url", strict=False)
+    return image_url_by_id
+
+
+def normalize_product_list(
+    raw_products: list[Any],
+    stock_by_id: Optional[dict[str, int]] = None,
+    image_url_by_id: Optional[dict[str, str]] = None,
+) -> list[dict[str, Any]]:
     normalized_products: list[dict[str, Any]] = []
     deduplicated_by_id: dict[str, dict[str, Any]] = {}
     for raw in raw_products:
         payload = raw if isinstance(raw, dict) else {}
         product_id = str(payload.get("id", "")).strip()
         fallback_stock = stock_by_id.get(product_id) if (stock_by_id is not None and product_id) else None
-        normalized = normalize_product_record(payload, fallback_stock=fallback_stock)
+        fallback_image_url = image_url_by_id.get(product_id) if (image_url_by_id is not None and product_id) else None
+        normalized = normalize_product_record(
+            payload,
+            fallback_stock=fallback_stock,
+            fallback_image_url=fallback_image_url,
+        )
         if not normalized:
             continue
         deduplicated_by_id[normalized["id"]] = normalized
@@ -742,6 +849,7 @@ def build_product_from_admin_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "price_term": normalize_price_text(payload.get("price_term", "0"), "price_term"),
         "price_wholesale": normalize_price_text(payload.get("price_wholesale", "0"), "price_wholesale"),
         "stock": normalize_stock_value(payload.get("stock", 0)),
+        "image_url": normalize_optional_media_url(payload.get("image_url", ""), "image_url", strict=True),
     }
 
 
@@ -757,6 +865,102 @@ def max_pdf_upload_size_label() -> str:
     if float(size_mb).is_integer():
         return f"{int(size_mb)}MB"
     return f"{size_mb:.1f}MB"
+
+
+def max_image_upload_size_label() -> str:
+    size_mb = IMAGE_UPLOAD_MAX_BYTES / (1024 * 1024)
+    if float(size_mb).is_integer():
+        return f"{int(size_mb)}MB"
+    return f"{size_mb:.1f}MB"
+
+
+def sanitize_media_prefix(value: str) -> str:
+    text = re.sub(r"[^a-z0-9_-]+", "-", str(value or "").strip().lower())
+    text = text.strip("-_")
+    return text[:40] if text else "image"
+
+
+def detect_image_extension(filename: str, content_type: str, header_probe: bytes) -> str:
+    header = header_probe[:32]
+    if header.startswith(b"\xFF\xD8\xFF"):
+        return "jpg"
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+        return "gif"
+    if len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+        return "webp"
+
+    normalized_content_type = str(content_type or "").strip().lower()
+    map_content_type = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/gif": "gif",
+        "image/webp": "webp",
+    }
+    if normalized_content_type in map_content_type:
+        return map_content_type[normalized_content_type]
+
+    suffix = Path(str(filename or "")).suffix.lower().lstrip(".")
+    if suffix in {"jpeg", "jpg"}:
+        return "jpg"
+    if suffix in {"png", "gif", "webp"}:
+        return suffix
+
+    raise HTTPException(status_code=400, detail="Imagem invalida. Use JPG, PNG, GIF ou WEBP.")
+
+
+async def save_uploaded_image_file(file: UploadFile, target_dir: Path, prefix: str) -> str:
+    filename = str(file.filename or "").strip()
+    if not filename:
+        raise HTTPException(status_code=400, detail="Nome de arquivo invalido")
+
+    bytes_received = 0
+    header_probe = b""
+    temp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".upload", dir=str(target_dir)) as temp_file:
+            temp_path = temp_file.name
+            while True:
+                chunk = await file.read(IMAGE_UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+
+                bytes_received += len(chunk)
+                if bytes_received > IMAGE_UPLOAD_MAX_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Imagem muito grande. Limite de {max_image_upload_size_label()}.",
+                    )
+
+                if len(header_probe) < 64:
+                    missing = 64 - len(header_probe)
+                    header_probe += chunk[:missing]
+
+                temp_file.write(chunk)
+
+        if bytes_received <= 0:
+            raise HTTPException(status_code=400, detail="Arquivo de imagem vazio")
+
+        extension = detect_image_extension(filename, str(file.content_type or ""), header_probe)
+        safe_prefix = sanitize_media_prefix(prefix)
+        final_name = f"{safe_prefix}-{int(time.time())}-{secrets.token_hex(6)}.{extension}"
+        final_path = target_dir / final_name
+        os.replace(temp_path, final_path)
+        temp_path = ""
+
+        if target_dir == MEDIA_LOGOS_DIR:
+            return f"/media/logos/{final_name}"
+        if target_dir == MEDIA_PRODUCTS_DIR:
+            return f"/media/products/{final_name}"
+        raise HTTPException(status_code=500, detail="Diretorio de destino invalido")
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def purge_pdf_jobs(now: float) -> None:
@@ -876,8 +1080,14 @@ def process_pdf_job(job_id: str, temp_path: str) -> None:
         products, total_pages = extract_products_with_worker(temp_path)
         if not products:
             raise ValueError("Nenhum produto valido foi encontrado no PDF")
-        existing_stock_by_id = build_existing_stock_map(get_products())
-        merged_products = normalize_product_list(products, stock_by_id=existing_stock_by_id)
+        existing_products = get_products()
+        existing_stock_by_id = build_existing_stock_map(existing_products)
+        existing_image_url_by_id = build_existing_image_url_map(existing_products)
+        merged_products = normalize_product_list(
+            products,
+            stock_by_id=existing_stock_by_id,
+            image_url_by_id=existing_image_url_by_id,
+        )
         replace_products(merged_products)
         set_pdf_job_state(
             job_id,
@@ -910,6 +1120,26 @@ async def startup_event():
     _ = get_products_index()
 
 
+@app.get("/media/{media_kind}/{filename}")
+def get_media_file(media_kind: str, filename: str):
+    kind = str(media_kind or "").strip().lower()
+    safe_name = Path(str(filename or "")).name
+    if safe_name != filename or not safe_name:
+        raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
+
+    if kind == "logos":
+        base_dir = MEDIA_LOGOS_DIR
+    elif kind == "products":
+        base_dir = MEDIA_PRODUCTS_DIR
+    else:
+        raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
+
+    file_path = base_dir / safe_name
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
+    return FileResponse(str(file_path), headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/info")
 def get_info():
     total_products = len(get_products())
@@ -925,6 +1155,18 @@ def get_public_config():
     return {
         "store_name": settings.get("store_name", DEFAULT_SETTINGS["store_name"]),
         "store_tagline": settings.get("store_tagline", DEFAULT_SETTINGS["store_tagline"]),
+        "store_logo_url": settings.get("store_logo_url", DEFAULT_SETTINGS["store_logo_url"]),
+        "show_product_images": bool_setting_value(
+            settings.get("show_product_images", DEFAULT_SETTINGS["show_product_images"])
+        ),
+        "theme_bg": settings.get("theme_bg", DEFAULT_SETTINGS["theme_bg"]),
+        "theme_bg_alt": settings.get("theme_bg_alt", DEFAULT_SETTINGS["theme_bg_alt"]),
+        "theme_surface": settings.get("theme_surface", DEFAULT_SETTINGS["theme_surface"]),
+        "theme_text": settings.get("theme_text", DEFAULT_SETTINGS["theme_text"]),
+        "theme_muted": settings.get("theme_muted", DEFAULT_SETTINGS["theme_muted"]),
+        "theme_accent": settings.get("theme_accent", DEFAULT_SETTINGS["theme_accent"]),
+        "theme_accent_strong": settings.get("theme_accent_strong", DEFAULT_SETTINGS["theme_accent_strong"]),
+        "theme_accent_deep": settings.get("theme_accent_deep", DEFAULT_SETTINGS["theme_accent_deep"]),
         "creator_name": CREATOR_NAME,
         "creator_whatsapp": CREATOR_WHATSAPP,
     }
@@ -1026,6 +1268,34 @@ def admin_update_config(payload: dict[str, Any], authorization: Optional[str] = 
     return {"message": "Configuracoes atualizadas", "config": updated}
 
 
+@app.post("/admin/upload/logo")
+async def admin_upload_logo(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
+    _ = require_admin_session(authorization)
+    try:
+        media_url = await save_uploaded_image_file(file, MEDIA_LOGOS_DIR, prefix="logo")
+        return {"message": "Logo enviada com sucesso", "media_url": media_url}
+    finally:
+        await file.close()
+
+
+@app.post("/admin/upload/product-image")
+async def admin_upload_product_image(
+    file: UploadFile = File(...),
+    product_id: Optional[str] = Query(None, max_length=60),
+    authorization: Optional[str] = Header(None),
+):
+    _ = require_admin_session(authorization)
+    safe_product_id = ""
+    if product_id:
+        safe_product_id = normalize_product_id(product_id)
+    prefix = f"product-{safe_product_id}" if safe_product_id else "product"
+    try:
+        media_url = await save_uploaded_image_file(file, MEDIA_PRODUCTS_DIR, prefix=prefix)
+        return {"message": "Imagem enviada com sucesso", "media_url": media_url}
+    finally:
+        await file.close()
+
+
 @app.get("/admin/products")
 def admin_list_products(
     query: str = Query("", max_length=120),
@@ -1107,6 +1377,8 @@ def admin_update_product(product_id: str, payload: dict[str, Any], authorization
         current["price_wholesale"] = normalize_price_text(payload.get("price_wholesale"), "price_wholesale")
     if "stock" in payload:
         current["stock"] = normalize_stock_value(payload.get("stock"))
+    if "image_url" in payload:
+        current["image_url"] = normalize_optional_media_url(payload.get("image_url"), "image_url", strict=True)
 
     normalized = normalize_product_record(current)
     if not normalized:

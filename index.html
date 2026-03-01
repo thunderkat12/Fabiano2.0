@@ -104,7 +104,8 @@
       z-index: 1;
     }
 
-    body.cart-open {
+    body.cart-open,
+    body.image-viewer-open {
       overflow: hidden;
     }
 
@@ -247,6 +248,82 @@
       font-size: 0.68rem;
       color: rgba(255, 255, 255, 0.75);
       margin-bottom: 0.4rem;
+    }
+
+    .store-logo-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 0.6rem;
+    }
+
+    .store-logo {
+      width: 78px;
+      height: 78px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.1);
+      object-fit: cover;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    }
+
+    .result-thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.6);
+      flex: 0 0 auto;
+    }
+
+    .cart-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.65);
+      flex: 0 0 auto;
+    }
+
+    .zoomable-image {
+      cursor: zoom-in;
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .zoomable-image:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .zoomable-image:focus-visible {
+      outline: 2px solid rgba(250, 204, 21, 0.95);
+      outline-offset: 2px;
+    }
+
+    .image-viewer-overlay {
+      background: rgba(10, 14, 24, 0.78);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(12px, 3vw, 28px);
+    }
+
+    .image-viewer-img {
+      max-width: min(96vw, 1080px);
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 22px 56px rgba(0, 0, 0, 0.48);
+      background: rgba(255, 255, 255, 0.08);
+      animation: viewerZoomIn 0.16s ease-out both;
+    }
+
+    @keyframes viewerZoomIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     #storeName {
@@ -604,6 +681,10 @@
         padding-bottom: 2rem;
       }
 
+      .store-logo-wrap {
+        justify-content: flex-start;
+      }
+
       .update-banner {
         padding: 0.9rem 1rem;
       }
@@ -687,6 +768,9 @@
   <header id="heroHeader" class="w-full max-w-5xl mb-5 fade-in">
     <div class="flex flex-col-reverse sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
       <div class="flex-1 text-center sm:text-left">
+        <div id="storeLogoWrap" class="store-logo-wrap hidden">
+          <img id="storeLogo" class="store-logo" src="" alt="Logo da loja" loading="lazy" decoding="async" />
+        </div>
         <p class="brand-kicker">Catalogo Premium</p>
         <h1 id="storeName" class="text-3xl md:text-4xl font-bold mb-2">Busca Inteligente de Produtos</h1>
         <p id="storeTagline">Busca com filtros, paginacao e carrinho persistente.</p>
@@ -759,6 +843,9 @@
   </button>
 
   <div id="cartOverlay" class="hidden fixed inset-0 bg-black/40 z-40" onclick="closeCart()"></div>
+  <div id="imageViewerOverlay" class="hidden image-viewer-overlay fixed inset-0 z-[70]" onclick="handleImageViewerOverlayClick(event)">
+    <img id="imageViewerImg" class="image-viewer-img" src="" alt="Imagem ampliada do produto" loading="eager" decoding="async" />
+  </div>
 
   <aside id="cartSidebar" class="fixed top-0 right-0 h-full w-full sm:w-[430px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300">
     <div class="p-3 sm:p-4 border-b">
@@ -870,7 +957,17 @@
     const PUBLIC_CONFIG_DEFAULT = {
       store_name: 'Busca Inteligente de Produtos',
       store_tagline: 'Busca com filtros, paginacao e carrinho persistente.',
-      creator_name: 'Desenvolvido por Daniel Victor | Sistemas & Automações',
+      store_logo_url: '',
+      show_product_images: true,
+      theme_bg: '',
+      theme_bg_alt: '',
+      theme_surface: '',
+      theme_text: '',
+      theme_muted: '',
+      theme_accent: '',
+      theme_accent_strong: '',
+      theme_accent_deep: '',
+      creator_name: 'Desenvolvido por Daniel Victor | Sistemas & Automacoes',
       creator_whatsapp: '(61) 9 9565-1684',
     };
     const ORDER_CONFIG_DEFAULT = {
@@ -910,6 +1007,14 @@
       await loadOrderConfig();
       await loadCategories();
       applyBranding();
+      const logoImg = document.getElementById('storeLogo');
+      const logoWrap = document.getElementById('storeLogoWrap');
+      if (logoImg && logoWrap) {
+        logoImg.addEventListener('error', () => {
+          logoImg.removeAttribute('src');
+          logoWrap.classList.add('hidden');
+        });
+      }
       attachSearchListeners();
       renderRecentSearches();
       const deliveryEl = document.getElementById('deliveryAddress');
@@ -922,6 +1027,9 @@
       if (changeEl) changeEl.addEventListener('input', handleCashChangeInput);
       loadPaymentState();
       renderCart();
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeImageViewer();
+      });
     };
 
     function initUpdateBanner() {
@@ -977,6 +1085,49 @@
         .replace(/'/g, '&#039;');
     }
     function escapeRegex(value) { return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function toBoolFlag(value) {
+      const text = String(value ?? '').trim().toLowerCase();
+      return ['1', 'true', 'yes', 'sim', 'on'].includes(text);
+    }
+    function isHexColor(value) {
+      return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(value || '').trim());
+    }
+    function normalizeMediaUrl(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      if (/^https?:\/\//i.test(text) || text.startsWith('/')) return text;
+      return '';
+    }
+    function isProductImageEnabled() {
+      return toBoolFlag(publicConfig.show_product_images);
+    }
+    function applyThemeColorOverrides() {
+      const colorMap = [
+        ['theme_bg', '--bg'],
+        ['theme_bg_alt', '--bg-alt'],
+        ['theme_surface', '--surface-strong'],
+        ['theme_text', '--text'],
+        ['theme_muted', '--muted'],
+        ['theme_accent', '--accent'],
+        ['theme_accent_strong', '--accent-strong'],
+        ['theme_accent_deep', '--accent-deep'],
+      ];
+      colorMap.forEach(([configKey, cssVar]) => {
+        const rawValue = String(publicConfig[configKey] || '').trim();
+        if (isHexColor(rawValue)) {
+          document.body.style.setProperty(cssVar, rawValue);
+        } else {
+          document.body.style.removeProperty(cssVar);
+        }
+      });
+
+      const surfaceValue = String(publicConfig.theme_surface || '').trim();
+      if (isHexColor(surfaceValue)) {
+        document.body.style.setProperty('--surface', surfaceValue);
+      } else {
+        document.body.style.removeProperty('--surface');
+      }
+    }
     function extractHighlightTerms(query) {
       const normalized = normalizeMatchText(query).replace(/[^\w\s]/g, ' ');
       const seen = new Set();
@@ -1295,8 +1446,25 @@
     }
 
     function applyBranding() {
-      document.getElementById('storeName').textContent = publicConfig.store_name || PUBLIC_CONFIG_DEFAULT.store_name;
+      const storeName = publicConfig.store_name || PUBLIC_CONFIG_DEFAULT.store_name;
+      document.getElementById('storeName').textContent = storeName;
       document.getElementById('storeTagline').textContent = publicConfig.store_tagline || PUBLIC_CONFIG_DEFAULT.store_tagline;
+      applyThemeColorOverrides();
+
+      const logoWrap = document.getElementById('storeLogoWrap');
+      const logoImg = document.getElementById('storeLogo');
+      const logoUrl = normalizeMediaUrl(publicConfig.store_logo_url || '');
+      if (logoWrap && logoImg) {
+        if (logoUrl) {
+          logoImg.src = logoUrl;
+          logoImg.alt = `Logo ${storeName}`;
+          logoWrap.classList.remove('hidden');
+        } else {
+          logoImg.removeAttribute('src');
+          logoWrap.classList.add('hidden');
+        }
+      }
+
       const creatorName = String(publicConfig.creator_name || PUBLIC_CONFIG_DEFAULT.creator_name).trim();
       const creatorWhatsapp = String(publicConfig.creator_whatsapp || PUBLIC_CONFIG_DEFAULT.creator_whatsapp || '').trim();
       document.getElementById('creatorInfo').textContent = creatorWhatsapp ? `${creatorName} | WhatsApp: ${creatorWhatsapp}` : creatorName;
@@ -1353,6 +1521,47 @@
 
     function handleKeyPress(e) { if (e.key === 'Enter') searchProducts(true); }
 
+    function bindZoomableImage(element, imageUrl, altText) {
+      if (!element) return;
+      const normalizedUrl = normalizeMediaUrl(imageUrl);
+      if (!normalizedUrl) return;
+      const openViewer = () => openImageViewer(normalizedUrl, altText);
+      element.addEventListener('click', openViewer);
+      element.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openViewer();
+      });
+    }
+
+    function openImageViewer(imageUrl, altText) {
+      const overlay = document.getElementById('imageViewerOverlay');
+      const image = document.getElementById('imageViewerImg');
+      const normalizedUrl = normalizeMediaUrl(imageUrl);
+      if (!overlay || !image || !normalizedUrl) return;
+      image.src = normalizedUrl;
+      image.alt = String(altText || 'Imagem ampliada do produto');
+      overlay.classList.remove('hidden');
+      document.body.classList.add('image-viewer-open');
+    }
+
+    function closeImageViewer() {
+      const overlay = document.getElementById('imageViewerOverlay');
+      const image = document.getElementById('imageViewerImg');
+      if (overlay) overlay.classList.add('hidden');
+      if (image) {
+        image.removeAttribute('src');
+        image.alt = 'Imagem ampliada do produto';
+      }
+      document.body.classList.remove('image-viewer-open');
+    }
+
+    function handleImageViewerOverlayClick(event) {
+      const image = document.getElementById('imageViewerImg');
+      if (!image) return;
+      if (!image.contains(event.target)) closeImageViewer();
+    }
+
     function attachSearchListeners() {
       document.getElementById('categoryFilter').addEventListener('change', () => { if (lastQuery) searchProducts(true); });
     }
@@ -1399,16 +1608,25 @@
           item.style.animationDelay = `${index * 0.04}s`;
 
           const priceValue = toNumber(product.price_sight);
+          const imageAltText = `Foto ${String(product.description || product.id || 'produto')}`;
+          const safeImageAltText = escapeHtml(imageAltText);
+          const imageUrl = isProductImageEnabled() ? normalizeMediaUrl(product.image_url || '') : '';
+          const imageMarkup = imageUrl
+            ? `<img src="${escapeHtml(imageUrl)}" alt="${safeImageAltText}" class="result-thumb zoomable-image" loading="lazy" decoding="async" role="button" tabindex="0" aria-label="Ampliar ${safeImageAltText}">`
+            : '';
           const categoryBadge = product.category
             ? `<span class="category-badge inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full">${escapeHtml(product.category)}</span>`
             : '';
           const highlightedDescription = highlightText(product.description || '', highlightTerms);
           item.innerHTML = `
-            <div>
-              <div class="result-code text-xs font-bold mb-1">COD: ${escapeHtml(product.id)}</div>
-              <h3 class="result-title font-semibold">${highlightedDescription}</h3>
-              <div class="result-meta text-xs mt-1">Unidade: ${escapeHtml(product.unit)}</div>
-              ${categoryBadge}
+            <div class="flex items-start gap-3">
+              ${imageMarkup}
+              <div>
+                <div class="result-code text-xs font-bold mb-1">COD: ${escapeHtml(product.id)}</div>
+                <h3 class="result-title font-semibold">${highlightedDescription}</h3>
+                <div class="result-meta text-xs mt-1">Unidade: ${escapeHtml(product.unit)}</div>
+                ${categoryBadge}
+              </div>
             </div>
             <div class="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3">
               <div class="text-right">
@@ -1420,6 +1638,7 @@
           `;
 
           item.querySelector('.add-cart-btn').addEventListener('click', () => addToCart(product));
+          bindZoomableImage(item.querySelector('.zoomable-image'), imageUrl, imageAltText);
           resultsArea.appendChild(item);
         });
 
@@ -1463,6 +1682,7 @@
         id: String(product.id),
         description: String(product.description || ''),
         unit: String(product.unit || 'UN'),
+        image_url: normalizeMediaUrl(product.image_url || ''),
         price: toNumber(product.price_sight),
         qty: 1,
         selected: true,
@@ -1567,6 +1787,9 @@
       if (index >= 0) {
         cart[index].qty += 1;
         cart[index].selected = true;
+        if (!normalizeMediaUrl(cart[index].image_url || '') && normalized.image_url) {
+          cart[index].image_url = normalized.image_url;
+        }
       } else {
         cart.push(normalized);
       }
@@ -1656,11 +1879,18 @@
       cartItemsEl.innerHTML = '';
       cart.forEach((item) => {
         const subtotal = item.price * item.qty;
+        const cartImageAltText = `Foto ${String(item.description || item.id || 'produto')}`;
+        const safeCartImageAltText = escapeHtml(cartImageAltText);
+        const cartImageUrl = isProductImageEnabled() ? normalizeMediaUrl(item.image_url || '') : '';
+        const cartImageMarkup = cartImageUrl
+          ? `<img src="${escapeHtml(cartImageUrl)}" alt="${safeCartImageAltText}" class="cart-thumb zoomable-image" loading="lazy" decoding="async" role="button" tabindex="0" aria-label="Ampliar ${safeCartImageAltText}">`
+          : '';
         const row = document.createElement('div');
         row.className = 'cart-row border rounded-lg p-3 space-y-2';
         row.innerHTML = `
           <div class="flex items-start gap-2">
             <input type="checkbox" class="mt-1 select-item" ${item.selected ? 'checked' : ''}>
+            ${cartImageMarkup}
             <div class="flex-1 min-w-0">
               <div class="cart-code text-xs font-bold">COD: ${item.id}</div>
               <div class="cart-title text-sm font-semibold break-words">${item.description}</div>
@@ -1683,6 +1913,7 @@
         row.querySelector('.qty-minus').addEventListener('click', () => changeCartQuantity(item.id, -1));
         row.querySelector('.qty-plus').addEventListener('click', () => changeCartQuantity(item.id, 1));
         row.querySelector('.qty-input').addEventListener('change', (e) => updateCartQuantity(item.id, e.target.value));
+        bindZoomableImage(row.querySelector('.zoomable-image'), cartImageUrl, cartImageAltText);
         cartItemsEl.appendChild(row);
       });
 

@@ -8,6 +8,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
   <style>
     body { font-family: 'Outfit', sans-serif; }
+    .admin-nav-btn {
+      color: #cbd5e1;
+      background: transparent;
+      transition: all .2s ease;
+    }
+    .admin-nav-btn:hover {
+      color: #ffffff;
+      border-color: rgba(148, 163, 184, 0.35);
+      background: rgba(30, 41, 59, 0.55);
+    }
+    .admin-nav-btn.active {
+      color: #ffffff;
+      border-color: rgba(129, 140, 248, 0.48);
+      background: rgba(79, 70, 229, 0.45);
+      box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.55);
+    }
+    .admin-panel-section {
+      animation: fadePanel .22s ease-out both;
+    }
     .dropzone-active {
       border-color: #4f46e5 !important;
       background-color: #eef2ff !important;
@@ -25,15 +44,27 @@
       padding: 0 2px;
       font-weight: 600;
     }
+    .product-thumb {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+    }
+    @keyframes fadePanel {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 p-3 sm:p-4 md:p-6">
-  <main class="max-w-3xl mx-auto">
+  <main class="max-w-7xl mx-auto">
     <header class="mb-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-indigo-700">Gerenciador</h1>
-          <p class="text-sm text-slate-500">Area administrativa para configurar loja, cupom e WhatsApp.</p>
+          <h1 class="text-2xl md:text-3xl font-bold text-indigo-700">Gerenciador Comercial</h1>
+          <p class="text-sm text-slate-500">Painel modular para operar catalogo, pedidos e aparencia por cliente.</p>
         </div>
         <a href="/" class="w-full sm:w-auto px-3 py-2 text-sm bg-white border rounded hover:bg-slate-100 transition text-center min-h-[44px] flex items-center justify-center">Voltar para loja</a>
       </div>
@@ -48,138 +79,259 @@
       <button onclick="loginAdmin()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[44px]">Entrar</button>
     </section>
 
-    <section id="adminPanel" class="hidden bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4 mt-5">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h2 class="text-lg font-semibold">Configuracoes do sistema</h2>
-          <p id="sessionInfo" class="text-xs text-slate-500">Sessao nao autenticada.</p>
+    <section id="adminPanel" class="hidden mt-5">
+      <div class="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-4">
+        <aside class="bg-slate-950 text-white rounded-2xl p-3 sm:p-4 lg:sticky lg:top-4 h-fit">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400 mb-3">Navegacao</p>
+          <nav class="flex lg:flex-col gap-2 overflow-x-auto pb-1">
+            <button type="button" class="admin-nav-btn text-left w-full px-3 py-2.5 rounded-lg border border-transparent min-h-[44px]" data-admin-section="dashboard">Dashboard</button>
+            <button type="button" class="admin-nav-btn text-left w-full px-3 py-2.5 rounded-lg border border-transparent min-h-[44px]" data-admin-section="catalogo">Catalogo</button>
+            <button type="button" class="admin-nav-btn text-left w-full px-3 py-2.5 rounded-lg border border-transparent min-h-[44px]" data-admin-section="aparencia">Aparencia</button>
+            <button type="button" class="admin-nav-btn text-left w-full px-3 py-2.5 rounded-lg border border-transparent min-h-[44px]" data-admin-section="pedidos">Pedidos</button>
+            <button type="button" class="admin-nav-btn text-left w-full px-3 py-2.5 rounded-lg border border-transparent min-h-[44px]" data-admin-section="configuracoes">Configuracoes</button>
+          </nav>
+        </aside>
+
+        <div class="space-y-4">
+          <div class="bg-white border rounded-xl shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold">Painel administrativo</h2>
+              <p id="sessionInfo" class="text-xs text-slate-500">Sessao nao autenticada.</p>
+            </div>
+            <button onclick="logoutAdmin()" class="text-sm text-red-600 hover:text-red-700 self-start sm:self-auto min-h-[40px]">Sair</button>
+          </div>
+
+          <section id="panel-dashboard" class="admin-panel-section bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-800">Dashboard</h3>
+              <p class="text-sm text-slate-500">Resumo rapido do catalogo e da operacao.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              <article class="border rounded-lg p-3 bg-slate-50">
+                <p class="text-xs text-slate-500">Produtos cadastrados</p>
+                <p id="dashProductsTotal" class="text-2xl font-bold text-slate-900">0</p>
+              </article>
+              <article class="border rounded-lg p-3 bg-slate-50">
+                <p class="text-xs text-slate-500">WhatsApp de pedidos</p>
+                <p id="dashWhatsapp" class="text-sm font-semibold text-slate-800">Nao configurado</p>
+              </article>
+              <article class="border rounded-lg p-3 bg-slate-50">
+                <p class="text-xs text-slate-500">Logo configurada</p>
+                <p id="dashLogoState" class="text-sm font-semibold text-slate-800">Nao</p>
+              </article>
+              <article class="border rounded-lg p-3 bg-slate-50">
+                <p class="text-xs text-slate-500">Fotos na busca</p>
+                <p id="dashImagesState" class="text-sm font-semibold text-slate-800">Desligado</p>
+              </article>
+            </div>
+            <div class="text-xs text-slate-500">
+              Dica: comece por <strong>Catalogo</strong> para subir PDF e inserir imagens; depois ajuste identidade em <strong>Aparencia</strong>.
+            </div>
+          </section>
+
+          <section id="panel-catalogo" class="admin-panel-section hidden bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
+            <div class="space-y-1">
+              <h3 class="text-lg font-semibold text-slate-800">Catalogo</h3>
+              <p class="text-sm text-slate-500">Atualize por PDF e gerencie produtos com imagem.</p>
+            </div>
+
+            <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
+              <div>
+                <h4 class="text-base font-semibold text-slate-800">Atualizar produtos via PDF</h4>
+                <p class="text-xs text-slate-500">Arraste um PDF para a area abaixo ou clique para selecionar.</p>
+              </div>
+
+              <div id="pdfDropzone"
+                class="border-2 border-dashed border-slate-300 rounded-lg bg-white p-5 text-center cursor-pointer transition hover:border-indigo-400 hover:bg-indigo-50/40 min-h-[120px] flex flex-col items-center justify-center gap-1"
+                tabindex="0" role="button" aria-label="Selecionar arquivo PDF para upload">
+                <p class="text-sm font-medium text-slate-700">Solte o PDF aqui</p>
+                <p class="text-xs text-slate-500">ou clique para escolher o arquivo</p>
+                <p id="pdfFileName" class="text-xs text-indigo-600 hidden"></p>
+              </div>
+              <input id="pdfInput" type="file" accept=".pdf,application/pdf" class="hidden" />
+
+              <div id="uploadProgressWrap" class="hidden space-y-1">
+                <div class="h-2 bg-slate-200 rounded overflow-hidden">
+                  <div id="uploadProgressBar" class="h-full bg-indigo-600 transition-all duration-200" style="width: 0%;"></div>
+                </div>
+                <p id="uploadProgressLabel" class="text-xs text-slate-500">Aguardando upload...</p>
+              </div>
+
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button id="uploadPdfBtn" type="button" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[44px]">
+                  Enviar PDF e atualizar
+                </button>
+                <span class="text-xs text-slate-500">Somente admin autenticado pode enviar.</span>
+              </div>
+            </section>
+
+            <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <h4 class="text-base font-semibold text-slate-800">Gestao de produtos</h4>
+                  <p class="text-xs text-slate-500">Busca semantica por codigo/descricao. Maximo de 5 resultados por pagina.</p>
+                </div>
+                <button type="button" onclick="clearProductForm()" class="px-3 py-2 text-xs bg-white border rounded hover:bg-slate-100 min-h-[36px]">
+                  Limpar formulario
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                <input id="productSearchInput" type="text" class="w-full p-2.5 border-2 border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px] bg-white" placeholder="Ex: display de iphone / bateria samsung..." />
+                <button type="button" onclick="loadAdminProducts(true)" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[44px]">Buscar</button>
+              </div>
+              <p id="productsSearchMeta" class="text-xs text-slate-500"></p>
+
+              <div class="border rounded-lg p-3 bg-white space-y-2">
+                <p class="text-xs text-slate-500 font-medium">Adicionar novo produto</p>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <input id="newProductId" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Codigo" />
+                  <input id="newProductDescription" type="text" class="p-2 border rounded min-h-[40px] md:col-span-2" placeholder="Descricao" />
+                  <input id="newProductUnit" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Unidade (UN)" />
+                  <input id="newProductPriceSight" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco a vista" />
+                  <input id="newProductPriceTerm" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco a prazo" />
+                  <input id="newProductPriceWholesale" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco atacado" />
+                  <input id="newProductStock" type="number" min="0" class="p-2 border rounded min-h-[40px]" placeholder="Estoque" />
+                  <div class="md:col-span-4 space-y-2 border rounded p-2 bg-slate-50">
+                    <label class="text-[11px] text-slate-500">Imagem do produto (arquivo do PC)</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                      <input id="newProductImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="w-full p-2 border rounded min-h-[40px] bg-white" />
+                      <button type="button" onclick="uploadNewProductImage()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]">Enviar imagem</button>
+                    </div>
+                    <input id="newProductImageUrl" type="text" class="p-2 border rounded min-h-[40px] bg-slate-100 text-slate-600" placeholder="Nenhuma imagem enviada" readonly />
+                  </div>
+                </div>
+                <button type="button" onclick="createProduct()" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 min-h-[40px]">Adicionar produto</button>
+              </div>
+
+              <div id="productsAdminList" class="space-y-2">
+                <div class="text-sm text-slate-500">Nenhum produto carregado.</div>
+              </div>
+
+              <div class="flex items-center justify-between gap-2">
+                <button id="productsPrevBtn" type="button" onclick="changeProductsPage(-1)" class="px-3 py-2 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 min-h-[40px]">Anterior</button>
+                <p id="productsPageInfo" class="text-xs text-slate-500">Pagina 1</p>
+                <button id="productsNextBtn" type="button" onclick="changeProductsPage(1)" class="px-3 py-2 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 min-h-[40px]">Proxima</button>
+              </div>
+            </section>
+          </section>
+
+          <section id="panel-aparencia" class="admin-panel-section hidden bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
+            <div class="space-y-1">
+              <h3 class="text-lg font-semibold text-slate-800">Aparencia</h3>
+              <p class="text-sm text-slate-500">Defina identidade visual da loja para cada cliente.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Nome da loja</label>
+                <input id="cfgStoreName" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Subtitulo da loja</label>
+                <input id="cfgStoreTagline" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Logo da loja (arquivo do PC)</label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input id="cfgStoreLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+                  <button type="button" onclick="uploadStoreLogo()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[44px]">Enviar logo</button>
+                </div>
+                <input id="cfgStoreLogoUrl" type="text" class="w-full mt-2 p-2 border rounded bg-slate-100 text-slate-600 min-h-[44px]" placeholder="Nenhuma logo enviada" readonly />
+                <p class="text-[11px] text-slate-500 mt-1">Formatos permitidos: JPG, PNG, WEBP e GIF.</p>
+                <div id="cfgStoreLogoPreviewWrap" class="hidden mt-2">
+                  <img id="cfgStoreLogoPreview" src="" alt="Preview da logo" class="h-16 w-16 rounded-lg object-cover border border-slate-200 bg-white" loading="lazy" />
+                </div>
+              </div>
+              <div class="md:col-span-2">
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input id="cfgShowProductImages" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  Exibir fotos dos produtos na busca da loja
+                </label>
+              </div>
+              <div class="md:col-span-2 border rounded-lg p-3 bg-slate-50 space-y-2">
+                <p class="text-xs font-semibold text-slate-700">Cores da vitrine (opcional)</p>
+                <p class="text-[11px] text-slate-500">Use formato HEX (#RRGGBB). Deixe vazio para manter o padrao.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input id="cfgThemeBg" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Fundo principal (#efebe4)" />
+                  <input id="cfgThemeBgAlt" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Fundo alternativo (#f8f5ef)" />
+                  <input id="cfgThemeSurface" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Cards/superficie (#ffffff)" />
+                  <input id="cfgThemeText" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Texto principal (#141414)" />
+                  <input id="cfgThemeMuted" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Texto secundario (#5f5b55)" />
+                  <input id="cfgThemeAccent" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Cor destaque (#c49a2c)" />
+                  <input id="cfgThemeAccentStrong" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Destaque forte (#e0b43f)" />
+                  <input id="cfgThemeAccentDeep" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Destaque profundo (#9d7520)" />
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button onclick="saveConfig()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition min-h-[44px]">Salvar aparencia</button>
+              <button onclick="loadConfig()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Recarregar</button>
+            </div>
+          </section>
+
+          <section id="panel-pedidos" class="admin-panel-section hidden bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
+            <div class="space-y-1">
+              <h3 class="text-lg font-semibold text-slate-800">Pedidos e WhatsApp</h3>
+              <p class="text-sm text-slate-500">Parametrize destino de pedidos, cupom e taxa por regiao.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">WhatsApp destino (somente numeros)</label>
+                <input id="cfgWhatsapp" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 5561995651684" />
+              </div>
+              <div class="md:col-span-2 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-xs text-slate-500">Taxas de entrega por regiao</label>
+                  <button type="button" onclick="addDeliveryFeeRuleRow()" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[36px]">
+                    + Adicionar regiao
+                  </button>
+                </div>
+                <div id="cfgDeliveryFeeRulesList" class="space-y-2"></div>
+                <p class="text-[11px] text-slate-500">Exemplo: Ceilandia R$ 10,00 | Guara R$ 20,00</p>
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Titulo do cupom</label>
+                <input id="cfgCouponTitle" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Mensagem do cupom</label>
+                <textarea id="cfgCouponMessage" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Endereco</label>
+                <textarea id="cfgCouponAddress" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Rodape do cupom</label>
+                <textarea id="cfgCouponFooter" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button onclick="saveConfig()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition min-h-[44px]">Salvar pedidos</button>
+              <button onclick="loadConfig()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Recarregar</button>
+            </div>
+          </section>
+
+          <section id="panel-configuracoes" class="admin-panel-section hidden bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
+            <div class="space-y-1">
+              <h3 class="text-lg font-semibold text-slate-800">Configuracoes gerais</h3>
+              <p class="text-sm text-slate-500">Conexao com API e parametros de ambiente do cliente.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="md:col-span-2">
+                <label class="text-xs text-slate-500">Endpoint da API (opcional)</label>
+                <input id="cfgApiBaseUrl" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: https://sua-api.onrender.com" />
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button onclick="saveConfig()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition min-h-[44px]">Salvar configuracoes</button>
+              <button onclick="loadConfig()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Recarregar</button>
+            </div>
+          </section>
+
+          <p class="text-xs text-slate-500">Desenvolvido por Daniel Victor | Sistemas & Automações | WhatsApp: (61) 9 9565-1684</p>
         </div>
-        <button onclick="logoutAdmin()" class="text-sm text-red-600 hover:text-red-700 self-start sm:self-auto min-h-[40px]">Sair</button>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Nome da loja</label>
-          <input id="cfgStoreName" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Subtitulo da loja</label>
-          <input id="cfgStoreTagline" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Endpoint da API (opcional)</label>
-          <input id="cfgApiBaseUrl" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: https://sua-api.onrender.com" />
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">WhatsApp destino (somente numeros)</label>
-          <input id="cfgWhatsapp" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 5561995651684" />
-        </div>
-        <div class="md:col-span-2 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <label class="text-xs text-slate-500">Taxas de entrega por regiao</label>
-            <button type="button" onclick="addDeliveryFeeRuleRow()" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[36px]">
-              + Adicionar regiao
-            </button>
-          </div>
-          <div id="cfgDeliveryFeeRulesList" class="space-y-2"></div>
-          <p class="text-[11px] text-slate-500">Exemplo: Ceilandia R$ 10,00 | Guara R$ 20,00</p>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Titulo do cupom</label>
-          <input id="cfgCouponTitle" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Mensagem do cupom</label>
-          <textarea id="cfgCouponMessage" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Endereco</label>
-          <textarea id="cfgCouponAddress" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-slate-500">Rodape do cupom</label>
-          <textarea id="cfgCouponFooter" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
-        </div>
-      </div>
-
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <button onclick="saveConfig()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition min-h-[44px]">Salvar configuracoes</button>
-        <button onclick="loadConfig()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Recarregar</button>
-      </div>
-
-      <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
-        <div>
-          <h3 class="text-base font-semibold text-slate-800">Atualizar produtos via PDF</h3>
-          <p class="text-xs text-slate-500">Arraste um PDF para a area abaixo ou clique para selecionar.</p>
-        </div>
-
-        <div id="pdfDropzone"
-          class="border-2 border-dashed border-slate-300 rounded-lg bg-white p-5 text-center cursor-pointer transition hover:border-indigo-400 hover:bg-indigo-50/40 min-h-[120px] flex flex-col items-center justify-center gap-1"
-          tabindex="0" role="button" aria-label="Selecionar arquivo PDF para upload">
-          <p class="text-sm font-medium text-slate-700">Solte o PDF aqui</p>
-          <p class="text-xs text-slate-500">ou clique para escolher o arquivo</p>
-          <p id="pdfFileName" class="text-xs text-indigo-600 hidden"></p>
-        </div>
-        <input id="pdfInput" type="file" accept=".pdf,application/pdf" class="hidden" />
-
-        <div id="uploadProgressWrap" class="hidden space-y-1">
-          <div class="h-2 bg-slate-200 rounded overflow-hidden">
-            <div id="uploadProgressBar" class="h-full bg-indigo-600 transition-all duration-200" style="width: 0%;"></div>
-          </div>
-          <p id="uploadProgressLabel" class="text-xs text-slate-500">Aguardando upload...</p>
-        </div>
-
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <button id="uploadPdfBtn" type="button" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[44px]">
-            Enviar PDF e atualizar
-          </button>
-          <span class="text-xs text-slate-500">Somente admin autenticado pode enviar.</span>
-        </div>
-      </section>
-
-      <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h3 class="text-base font-semibold text-slate-800">Gestao de produtos</h3>
-            <p class="text-xs text-slate-500">Busca semantica por codigo/descricao (corrige termos como "diplsay"). Maximo de 5 resultados por pagina.</p>
-          </div>
-          <button type="button" onclick="clearProductForm()" class="px-3 py-2 text-xs bg-white border rounded hover:bg-slate-100 min-h-[36px]">
-            Limpar formulario
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-          <input id="productSearchInput" type="text" class="w-full p-2.5 border-2 border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px] bg-white" placeholder="Ex: display de iphone / bateria samsung..." />
-          <button type="button" onclick="loadAdminProducts(true)" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[44px]">Buscar</button>
-        </div>
-        <p id="productsSearchMeta" class="text-xs text-slate-500"></p>
-
-        <div class="border rounded-lg p-3 bg-white space-y-2">
-          <p class="text-xs text-slate-500 font-medium">Adicionar novo produto</p>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <input id="newProductId" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Codigo" />
-            <input id="newProductDescription" type="text" class="p-2 border rounded min-h-[40px] md:col-span-2" placeholder="Descricao" />
-            <input id="newProductUnit" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Unidade (UN)" />
-            <input id="newProductPriceSight" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco a vista" />
-            <input id="newProductPriceTerm" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco a prazo" />
-            <input id="newProductPriceWholesale" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Preco atacado" />
-            <input id="newProductStock" type="number" min="0" class="p-2 border rounded min-h-[40px]" placeholder="Estoque" />
-          </div>
-          <button type="button" onclick="createProduct()" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 min-h-[40px]">Adicionar produto</button>
-        </div>
-
-        <div id="productsAdminList" class="space-y-2">
-          <div class="text-sm text-slate-500">Nenhum produto carregado.</div>
-        </div>
-
-        <div class="flex items-center justify-between gap-2">
-          <button id="productsPrevBtn" type="button" onclick="changeProductsPage(-1)" class="px-3 py-2 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 min-h-[40px]">Anterior</button>
-          <p id="productsPageInfo" class="text-xs text-slate-500">Pagina 1</p>
-          <button id="productsNextBtn" type="button" onclick="changeProductsPage(1)" class="px-3 py-2 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 min-h-[40px]">Proxima</button>
-        </div>
-      </section>
-
-      <p class="text-xs text-slate-500">Desenvolvido por Daniel Victor | Sistemas & Automações | WhatsApp: (61) 9 9565-1684</p>
     </section>
 
     <div id="status" class="mt-4 text-sm"></div>
@@ -193,6 +345,9 @@
     let productsAdminOffset = 0;
     const productsAdminLimit = 5;
     let productsAdminTotal = 0;
+    const IMAGE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+    let currentAdminSection = 'dashboard';
+    const ADMIN_SECTIONS = ['dashboard', 'catalogo', 'aparencia', 'pedidos', 'configuracoes'];
     const ADMIN_SEARCH_STOPWORDS = new Set(['a', 'as', 'o', 'os', 'um', 'uma', 'uns', 'umas', 'de', 'do', 'da', 'dos', 'das', 'e', 'em', 'no', 'na', 'nos', 'nas', 'para', 'com', 'sem']);
     const ADMIN_SEARCH_NORMALIZATION = {
       diplsay: 'display',
@@ -214,8 +369,17 @@
 
     window.onload = async function () {
       document.getElementById('loginUser').value = '';
+      initAdminSidebar();
+      switchAdminSection('dashboard');
       setupPdfUploadHandlers();
       clearProductForm();
+      const logoPreview = document.getElementById('cfgStoreLogoPreview');
+      if (logoPreview) {
+        logoPreview.addEventListener('error', () => {
+          const wrap = document.getElementById('cfgStoreLogoPreviewWrap');
+          if (wrap) wrap.classList.add('hidden');
+        });
+      }
       const productSearchInput = document.getElementById('productSearchInput');
       if (productSearchInput) {
         productSearchInput.addEventListener('keydown', (event) => {
@@ -241,6 +405,51 @@
       el.textContent = message;
     }
 
+    function initAdminSidebar() {
+      document.querySelectorAll('.admin-nav-btn[data-admin-section]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const section = String(btn.dataset.adminSection || '').trim().toLowerCase();
+          switchAdminSection(section);
+        });
+      });
+    }
+
+    function switchAdminSection(section) {
+      const normalized = ADMIN_SECTIONS.includes(section) ? section : 'dashboard';
+      currentAdminSection = normalized;
+      ADMIN_SECTIONS.forEach((key) => {
+        const panel = document.getElementById(`panel-${key}`);
+        if (!panel) return;
+        panel.classList.toggle('hidden', key !== normalized);
+      });
+      document.querySelectorAll('.admin-nav-btn[data-admin-section]').forEach((btn) => {
+        const isActive = String(btn.dataset.adminSection || '').trim().toLowerCase() === normalized;
+        btn.classList.toggle('active', isActive);
+      });
+    }
+
+    function toBool(value) {
+      const text = String(value ?? '').trim().toLowerCase();
+      return ['1', 'true', 'yes', 'sim', 'on'].includes(text);
+    }
+
+    function updateDashboardCards() {
+      const productsEl = document.getElementById('dashProductsTotal');
+      if (productsEl) productsEl.textContent = String(Math.max(0, Number(productsAdminTotal || 0)));
+
+      const whatsappRaw = String(document.getElementById('cfgWhatsapp')?.value || '').trim();
+      const whatsappEl = document.getElementById('dashWhatsapp');
+      if (whatsappEl) whatsappEl.textContent = whatsappRaw || 'Nao configurado';
+
+      const logoRaw = String(document.getElementById('cfgStoreLogoUrl')?.value || '').trim();
+      const logoEl = document.getElementById('dashLogoState');
+      if (logoEl) logoEl.textContent = logoRaw ? 'Sim' : 'Nao';
+
+      const imagesEnabled = Boolean(document.getElementById('cfgShowProductImages')?.checked);
+      const imagesEl = document.getElementById('dashImagesState');
+      if (imagesEl) imagesEl.textContent = imagesEnabled ? 'Ligado' : 'Desligado';
+    }
+
     function sessionText() {
       if (!adminSession) return 'Sessao nao autenticada.';
       return `Logado como ${adminSession.username} (${adminSession.role})`;
@@ -252,6 +461,8 @@
       document.getElementById('adminPanel').classList.toggle('hidden', !logged);
       const sessionInfo = document.getElementById('sessionInfo');
       if (sessionInfo) sessionInfo.textContent = sessionText();
+      switchAdminSection(logged ? currentAdminSection : 'dashboard');
+      updateDashboardCards();
       setUploadBusyState(uploadInFlight);
     }
 
@@ -357,6 +568,158 @@
       if (Number(file.size || 0) <= 0) return 'Arquivo vazio.';
       if (Number(file.size) > maxBytes) return 'Arquivo muito grande. Limite de 25MB.';
       return '';
+    }
+
+    function validateImageFile(file) {
+      if (!file) return 'Selecione um arquivo de imagem.';
+      const name = String(file.name || '').toLowerCase();
+      if (!/\.(jpe?g|png|gif|webp)$/.test(name)) {
+        return 'Formato invalido. Use JPG, PNG, GIF ou WEBP.';
+      }
+      const type = String(file.type || '').toLowerCase();
+      const validTypes = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
+      if (type && !validTypes.has(type)) {
+        return 'Tipo de arquivo invalido. Use JPG, PNG, GIF ou WEBP.';
+      }
+      if (Number(file.size || 0) <= 0) return 'Arquivo de imagem vazio.';
+      if (Number(file.size) > IMAGE_UPLOAD_MAX_BYTES) return 'Imagem muito grande. Limite de 5MB.';
+      return '';
+    }
+
+    async function uploadImageToServer(file, endpoint) {
+      if (!adminToken) throw new Error('Faca login para enviar imagens.');
+      const validationError = validateImageFile(file);
+      if (validationError) throw new Error(validationError);
+
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+        body: formData,
+      });
+
+      if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = {};
+      }
+      if (!response.ok) {
+        const detail = data && typeof data.detail === 'string' ? data.detail.trim() : '';
+        throw new Error(detail || 'Falha ao enviar imagem.');
+      }
+      const mediaUrl = String(data.media_url || '').trim();
+      if (!mediaUrl) throw new Error('Servidor nao retornou URL da imagem.');
+      return mediaUrl;
+    }
+
+    function renderStoreLogoPreview() {
+      const previewWrap = document.getElementById('cfgStoreLogoPreviewWrap');
+      const previewImg = document.getElementById('cfgStoreLogoPreview');
+      const url = String(document.getElementById('cfgStoreLogoUrl')?.value || '').trim();
+      if (!previewWrap || !previewImg) return;
+      if (!url) {
+        previewImg.removeAttribute('src');
+        previewWrap.classList.add('hidden');
+        return;
+      }
+      previewImg.src = url;
+      previewWrap.classList.remove('hidden');
+    }
+
+    async function uploadStoreLogo() {
+      const input = document.getElementById('cfgStoreLogoFile');
+      const file = input && input.files && input.files.length ? input.files[0] : null;
+      if (!file) {
+        setStatus('Selecione a imagem da logo antes de enviar.', 'error');
+        return;
+      }
+      try {
+        const mediaUrl = await uploadImageToServer(file, '/admin/upload/logo');
+        document.getElementById('cfgStoreLogoUrl').value = mediaUrl;
+        if (input) input.value = '';
+        renderStoreLogoPreview();
+        updateDashboardCards();
+        setStatus('Logo enviada. Clique em "Salvar aparencia" para publicar na loja.', 'ok');
+      } catch (error) {
+        setStatus(error.message || 'Falha ao enviar logo.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function uploadNewProductImage() {
+      const fileInput = document.getElementById('newProductImageFile');
+      const file = fileInput && fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
+      if (!file) {
+        setStatus('Selecione a imagem do produto antes de enviar.', 'error');
+        return;
+      }
+
+      const productId = String(document.getElementById('newProductId')?.value || '').trim();
+      const query = productId ? `?product_id=${encodeURIComponent(productId)}` : '';
+      try {
+        const mediaUrl = await uploadImageToServer(file, `/admin/upload/product-image${query}`);
+        document.getElementById('newProductImageUrl').value = mediaUrl;
+        if (fileInput) fileInput.value = '';
+        setStatus('Imagem enviada para o novo produto.', 'ok');
+      } catch (error) {
+        setStatus(error.message || 'Falha ao enviar imagem do produto.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    function renderProductCardImagePreview(card, imageUrl, productId) {
+      if (!card) return;
+      const host = card.querySelector('.product-image-preview');
+      if (!host) return;
+      const safeId = escapeHtml(productId || '');
+      const safeUrl = escapeHtml(imageUrl || '');
+      if (safeUrl) {
+        host.innerHTML = `<img src="${safeUrl}" alt="Imagem do produto ${safeId}" class="product-thumb" loading="lazy">`;
+      } else {
+        host.innerHTML = '<div class="product-thumb flex items-center justify-center text-[10px] text-slate-400">Sem imagem</div>';
+      }
+    }
+
+    async function persistProductImage(productId, imageUrl) {
+      const response = await fetch(`/admin/products/${encodeURIComponent(productId)}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ image_url: String(imageUrl || '').trim() }),
+      });
+      if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+      if (!response.ok) {
+        const detail = await parseDetailMessage(response, 'Nao foi possivel salvar a imagem do produto');
+        throw new Error(detail);
+      }
+    }
+
+    async function uploadProductImageForCard(productId, card) {
+      if (!card) return;
+      const fileInput = card.querySelector('.product-image-file');
+      const file = fileInput && fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
+      if (!file) {
+        setStatus(`Selecione uma imagem para o produto ${productId}.`, 'error');
+        return;
+      }
+
+      const query = productId ? `?product_id=${encodeURIComponent(productId)}` : '';
+      try {
+        const mediaUrl = await uploadImageToServer(file, `/admin/upload/product-image${query}`);
+        const urlInput = card.querySelector('.product-image-url');
+        if (urlInput) urlInput.value = mediaUrl;
+        if (fileInput) fileInput.value = '';
+        renderProductCardImagePreview(card, mediaUrl, productId);
+        await persistProductImage(productId, mediaUrl);
+        setStatus(`Imagem do produto ${productId} salva com sucesso.`, 'ok');
+        await loadAdminProducts(false);
+      } catch (error) {
+        setStatus(error.message || `Falha ao enviar imagem do produto ${productId}.`, 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
     }
 
     function setUploadProgress(percent, message) {
@@ -676,6 +1039,16 @@
     function applyConfigToForm(cfg) {
       document.getElementById('cfgStoreName').value = cfg.store_name || '';
       document.getElementById('cfgStoreTagline').value = cfg.store_tagline || '';
+      document.getElementById('cfgStoreLogoUrl').value = cfg.store_logo_url || '';
+      document.getElementById('cfgShowProductImages').checked = toBool(cfg.show_product_images);
+      document.getElementById('cfgThemeBg').value = cfg.theme_bg || '';
+      document.getElementById('cfgThemeBgAlt').value = cfg.theme_bg_alt || '';
+      document.getElementById('cfgThemeSurface').value = cfg.theme_surface || '';
+      document.getElementById('cfgThemeText').value = cfg.theme_text || '';
+      document.getElementById('cfgThemeMuted').value = cfg.theme_muted || '';
+      document.getElementById('cfgThemeAccent').value = cfg.theme_accent || '';
+      document.getElementById('cfgThemeAccentStrong').value = cfg.theme_accent_strong || '';
+      document.getElementById('cfgThemeAccentDeep').value = cfg.theme_accent_deep || '';
       document.getElementById('cfgApiBaseUrl').value = cfg.api_base_url || '';
       document.getElementById('cfgWhatsapp').value = cfg.whatsapp_number || '';
       const parsedRules = parseDeliveryFeeRulesText(cfg.delivery_fee_rules || '');
@@ -685,6 +1058,8 @@
       document.getElementById('cfgCouponMessage').value = cfg.coupon_message || '';
       document.getElementById('cfgCouponAddress').value = cfg.coupon_address || '';
       document.getElementById('cfgCouponFooter').value = cfg.coupon_footer || '';
+      renderStoreLogoPreview();
+      updateDashboardCards();
     }
 
     function collectConfigFromForm() {
@@ -695,6 +1070,16 @@
       return {
         store_name: document.getElementById('cfgStoreName').value.trim(),
         store_tagline: document.getElementById('cfgStoreTagline').value.trim(),
+        store_logo_url: document.getElementById('cfgStoreLogoUrl').value.trim(),
+        show_product_images: document.getElementById('cfgShowProductImages').checked ? '1' : '0',
+        theme_bg: document.getElementById('cfgThemeBg').value.trim(),
+        theme_bg_alt: document.getElementById('cfgThemeBgAlt').value.trim(),
+        theme_surface: document.getElementById('cfgThemeSurface').value.trim(),
+        theme_text: document.getElementById('cfgThemeText').value.trim(),
+        theme_muted: document.getElementById('cfgThemeMuted').value.trim(),
+        theme_accent: document.getElementById('cfgThemeAccent').value.trim(),
+        theme_accent_strong: document.getElementById('cfgThemeAccentStrong').value.trim(),
+        theme_accent_deep: document.getElementById('cfgThemeAccentDeep').value.trim(),
         api_base_url: document.getElementById('cfgApiBaseUrl').value.trim(),
         whatsapp_number: document.getElementById('cfgWhatsapp').value.trim(),
         delivery_fee_amount: legacyAmount,
@@ -875,6 +1260,9 @@
       document.getElementById('newProductPriceTerm').value = '';
       document.getElementById('newProductPriceWholesale').value = '';
       document.getElementById('newProductStock').value = '0';
+      document.getElementById('newProductImageUrl').value = '';
+      const imageInput = document.getElementById('newProductImageFile');
+      if (imageInput) imageInput.value = '';
     }
 
     function renderAdminProducts(items) {
@@ -904,6 +1292,10 @@
         const priceTerm = escapeHtml(item.price_term || '0.00');
         const priceWholesale = escapeHtml(item.price_wholesale || '0.00');
         const stock = escapeHtml(item.stock || 0);
+        const imageUrl = escapeHtml(item.image_url || '');
+        const imagePreview = imageUrl
+          ? `<img src="${imageUrl}" alt="Imagem do produto ${id}" class="product-thumb" loading="lazy">`
+          : '<div class="product-thumb flex items-center justify-center text-[10px] text-slate-400">Sem imagem</div>';
 
         const card = document.createElement('div');
         card.className = 'product-card p-3 space-y-2';
@@ -941,6 +1333,19 @@
               <input type="number" min="0" class="product-stock p-2 border rounded w-full min-h-[40px]" value="${stock}" />
             </div>
           </div>
+          <div class="grid grid-cols-1 md:grid-cols-[84px_1fr] gap-2 items-start">
+            <div class="product-image-preview flex items-center justify-center">${imagePreview}</div>
+            <div class="space-y-2">
+              <div>
+                <label class="text-[11px] text-slate-500">Imagem do produto</label>
+                <input type="text" class="product-image-url p-2 border rounded w-full min-h-[40px] bg-slate-50 text-slate-600" value="${imageUrl}" readonly />
+              </div>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input type="file" class="product-image-file p-2 border rounded min-h-[40px] bg-white w-full" accept="image/png,image/jpeg,image/webp,image/gif" />
+                <button type="button" class="upload-product-image-btn px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]">Enviar foto</button>
+              </div>
+            </div>
+          </div>
           <div class="flex justify-end">
             <button type="button" class="save-product-btn px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]">Salvar alteracoes</button>
           </div>
@@ -948,6 +1353,7 @@
 
         card.querySelector('.save-product-btn').addEventListener('click', () => updateProduct(item.id, card));
         card.querySelector('.delete-product-btn').addEventListener('click', () => deleteProduct(item.id));
+        card.querySelector('.upload-product-image-btn').addEventListener('click', () => uploadProductImageForCard(item.id, card));
         listEl.appendChild(card);
       });
       updateProductsPager();
@@ -972,6 +1378,7 @@
         const data = await response.json();
         productsAdminTotal = Number(data.total || 0);
         renderAdminProducts(Array.isArray(data.results) ? data.results : []);
+        updateDashboardCards();
       } catch (error) {
         setStatus(error.message, 'error');
         if (String(error.message).toLowerCase().includes('sessao')) {
@@ -998,6 +1405,7 @@
         price_term: normalizeMoneyInput(document.getElementById('newProductPriceTerm').value),
         price_wholesale: normalizeMoneyInput(document.getElementById('newProductPriceWholesale').value),
         stock: normalizeStockInput(document.getElementById('newProductStock').value),
+        image_url: document.getElementById('newProductImageUrl').value.trim(),
       };
 
       if (!payload.id || !payload.description) {
@@ -1034,6 +1442,7 @@
         price_term: normalizeMoneyInput(card.querySelector('.product-price-term')?.value),
         price_wholesale: normalizeMoneyInput(card.querySelector('.product-price-wholesale')?.value),
         stock: normalizeStockInput(card.querySelector('.product-stock')?.value),
+        image_url: String(card.querySelector('.product-image-url')?.value || '').trim(),
       };
 
       if (!payload.description) {
