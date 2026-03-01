@@ -1092,6 +1092,129 @@
     function isHexColor(value) {
       return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(value || '').trim());
     }
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+    function hexToRgb(hex) {
+      const raw = String(hex || '').trim().replace('#', '');
+      if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(raw)) return null;
+      const normalized = raw.length === 3
+        ? raw.split('').map((ch) => `${ch}${ch}`).join('')
+        : raw;
+      return {
+        r: Number.parseInt(normalized.slice(0, 2), 16),
+        g: Number.parseInt(normalized.slice(2, 4), 16),
+        b: Number.parseInt(normalized.slice(4, 6), 16),
+      };
+    }
+    function rgbToHex(r, g, b) {
+      const toPair = (value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, '0');
+      return `#${toPair(r)}${toPair(g)}${toPair(b)}`;
+    }
+    function rgbToHsl(r, g, b) {
+      const rn = clamp(r, 0, 255) / 255;
+      const gn = clamp(g, 0, 255) / 255;
+      const bn = clamp(b, 0, 255) / 255;
+      const max = Math.max(rn, gn, bn);
+      const min = Math.min(rn, gn, bn);
+      const delta = max - min;
+      let h = 0;
+      if (delta > 0) {
+        if (max === rn) h = ((gn - bn) / delta) % 6;
+        else if (max === gn) h = ((bn - rn) / delta) + 2;
+        else h = ((rn - gn) / delta) + 4;
+      }
+      h = Math.round((h * 60 + 360) % 360);
+      const l = (max + min) / 2;
+      const s = delta === 0 ? 0 : delta / (1 - Math.abs((2 * l) - 1));
+      return { h, s: s * 100, l: l * 100 };
+    }
+    function hslToRgb(h, s, l) {
+      const hn = ((h % 360) + 360) % 360;
+      const sn = clamp(s, 0, 100) / 100;
+      const ln = clamp(l, 0, 100) / 100;
+      const c = (1 - Math.abs((2 * ln) - 1)) * sn;
+      const x = c * (1 - Math.abs(((hn / 60) % 2) - 1));
+      const m = ln - (c / 2);
+      let r1 = 0;
+      let g1 = 0;
+      let b1 = 0;
+      if (hn < 60) {
+        r1 = c; g1 = x; b1 = 0;
+      } else if (hn < 120) {
+        r1 = x; g1 = c; b1 = 0;
+      } else if (hn < 180) {
+        r1 = 0; g1 = c; b1 = x;
+      } else if (hn < 240) {
+        r1 = 0; g1 = x; b1 = c;
+      } else if (hn < 300) {
+        r1 = x; g1 = 0; b1 = c;
+      } else {
+        r1 = c; g1 = 0; b1 = x;
+      }
+      return {
+        r: Math.round((r1 + m) * 255),
+        g: Math.round((g1 + m) * 255),
+        b: Math.round((b1 + m) * 255),
+      };
+    }
+    function hexToRgba(hex, alpha = 1) {
+      const rgb = hexToRgb(hex);
+      if (!rgb) return '';
+      const a = clamp(alpha, 0, 1);
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
+    }
+    function relativeLuminance(hex) {
+      const rgb = hexToRgb(hex);
+      if (!rgb) return 0;
+      const normalize = (value) => {
+        const channel = clamp(value, 0, 255) / 255;
+        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      };
+      const r = normalize(rgb.r);
+      const g = normalize(rgb.g);
+      const b = normalize(rgb.b);
+      return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+    }
+    function accentContrastColor(hex, darkMode) {
+      const lum = relativeLuminance(hex);
+      if (darkMode) return lum >= 0.62 ? '#111827' : '#f8fafc';
+      return lum >= 0.52 ? '#171208' : '#f8fafc';
+    }
+    function darkVariantFromCustom(configKey, hex) {
+      const rgb = hexToRgb(hex);
+      if (!rgb) return hex;
+      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+      let s = hsl.s;
+      let l = hsl.l;
+      if (configKey === 'theme_bg') {
+        s = clamp((hsl.s * 0.38) + 6, 4, 28);
+        l = clamp((hsl.l * 0.18) + 2, 7, 18);
+      } else if (configKey === 'theme_bg_alt') {
+        s = clamp((hsl.s * 0.4) + 7, 5, 30);
+        l = clamp((hsl.l * 0.22) + 4, 11, 24);
+      } else if (configKey === 'theme_surface') {
+        s = clamp((hsl.s * 0.28) + 4, 3, 22);
+        l = clamp((hsl.l * 0.2) + 3, 10, 22);
+      } else if (configKey === 'theme_text') {
+        s = clamp(hsl.s * 0.24, 0, 20);
+        l = clamp(82 + (hsl.l * 0.12), 82, 96);
+      } else if (configKey === 'theme_muted') {
+        s = clamp(hsl.s * 0.3, 0, 24);
+        l = clamp(62 + (hsl.l * 0.1), 62, 84);
+      } else if (configKey === 'theme_accent') {
+        s = clamp(Math.max(hsl.s, 42), 38, 86);
+        l = clamp(50 + (hsl.l * 0.16), 48, 72);
+      } else if (configKey === 'theme_accent_strong') {
+        s = clamp(Math.max(hsl.s, 46), 40, 90);
+        l = clamp(58 + (hsl.l * 0.15), 56, 78);
+      } else if (configKey === 'theme_accent_deep') {
+        s = clamp(Math.max(hsl.s, 38), 34, 84);
+        l = clamp(40 + (hsl.l * 0.12), 38, 62);
+      }
+      const transformed = hslToRgb(hsl.h, s, l);
+      return rgbToHex(transformed.r, transformed.g, transformed.b);
+    }
     function normalizeMediaUrl(value) {
       const text = String(value || '').trim();
       if (!text) return '';
@@ -1102,6 +1225,7 @@
       return toBoolFlag(publicConfig.show_product_images);
     }
     function applyThemeColorOverrides() {
+      const darkMode = document.body.classList.contains('dark-mode');
       const colorMap = [
         ['theme_bg', '--bg'],
         ['theme_bg_alt', '--bg-alt'],
@@ -1112,20 +1236,35 @@
         ['theme_accent_strong', '--accent-strong'],
         ['theme_accent_deep', '--accent-deep'],
       ];
+      const resolvedByKey = {};
       colorMap.forEach(([configKey, cssVar]) => {
         const rawValue = String(publicConfig[configKey] || '').trim();
         if (isHexColor(rawValue)) {
-          document.body.style.setProperty(cssVar, rawValue);
+          const normalized = rawValue.toLowerCase();
+          const resolved = darkMode ? darkVariantFromCustom(configKey, normalized) : normalized;
+          resolvedByKey[configKey] = resolved;
+          document.body.style.setProperty(cssVar, resolved);
         } else {
+          resolvedByKey[configKey] = '';
           document.body.style.removeProperty(cssVar);
         }
       });
 
-      const surfaceValue = String(publicConfig.theme_surface || '').trim();
-      if (isHexColor(surfaceValue)) {
-        document.body.style.setProperty('--surface', surfaceValue);
+      const surfaceResolved = resolvedByKey.theme_surface;
+      if (surfaceResolved) {
+        if (darkMode) document.body.style.setProperty('--surface', hexToRgba(surfaceResolved, 0.84));
+        else document.body.style.setProperty('--surface', surfaceResolved);
       } else {
         document.body.style.removeProperty('--surface');
+      }
+
+      const accentResolved = resolvedByKey.theme_accent;
+      if (accentResolved) {
+        document.body.style.setProperty('--accent-contrast', accentContrastColor(accentResolved, darkMode));
+        document.body.style.setProperty('--focus', hexToRgba(accentResolved, darkMode ? 0.32 : 0.28));
+      } else {
+        document.body.style.removeProperty('--accent-contrast');
+        document.body.style.removeProperty('--focus');
       }
     }
     function extractHighlightTerms(query) {
@@ -1382,6 +1521,7 @@
       document.body.classList.toggle('dark-mode', dark);
       const toggle = document.getElementById('themeToggleBtn');
       if (toggle) toggle.textContent = dark ? 'Modo claro' : 'Modo escuro';
+      applyThemeColorOverrides();
     }
 
     function toggleTheme() {
