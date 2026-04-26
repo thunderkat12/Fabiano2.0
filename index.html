@@ -2446,7 +2446,7 @@
       const isPickupOrder = isPickupDelivery(deliveryRegionLabel, '', deliveryAddressValue);
       const orderDate = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
       const locationState = deliveryLocationState && deliveryLocationState.latitude !== null && deliveryLocationState.longitude !== null ? deliveryLocationState : null;
-      const mapsUrl = (!isPickupOrder && locationState)
+      const mapsUrl = locationState
         ? `https://www.google.com/maps?q=${Number(locationState.latitude).toFixed(7)},${Number(locationState.longitude).toFixed(7)}`
         : '';
 
@@ -2467,6 +2467,12 @@
       } else if (deliveryAddressValue) {
         lines.push(`Endereco: ${deliveryAddressValue}`);
       }
+      if (mapsUrl) {
+        lines.push(separator);
+        lines.push('*Localizacao do cliente*');
+        lines.push('Localizacao confirmada pelo cliente.');
+        lines.push(`Mapa: ${mapsUrl}`);
+      }
       lines.push(separator);
       lines.push('*Pagamento*');
       lines.push(`Forma: ${paymentData.label}`);
@@ -2486,10 +2492,6 @@
       lines.push(`Produtos: ${formatCurrency(orderSummary.productsTotal)}`);
       lines.push(orderSummary.deliveryFee > 0 ? `Taxa de entrega: ${formatCurrency(orderSummary.deliveryFee)}` : 'Taxa: gratis');
       lines.push(`*TOTAL: ${formatCurrency(orderSummary.payableTotal)}*`);
-      if (mapsUrl) {
-        lines.push(separator);
-        lines.push(`Localizacao no mapa: ${mapsUrl}`);
-      }
       if (orderConfig.coupon_footer) {
         lines.push(separator);
         lines.push(orderConfig.coupon_footer);

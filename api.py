@@ -181,6 +181,8 @@ def load_runtime_security_secrets(admin_user: str) -> dict[str, Any]:
     return payload
 
 
+DEFAULT_ADMIN_PASSWORD = "daniel142536"
+DEFAULT_MANAGER_ENTRY_KEY = "Daniel@qwe"
 ADMIN_USER = os.getenv("ADMIN_USER", os.getenv("MASTER_USER", "admin")).strip().lower() or "admin"
 ENV_ADMIN_PASSWORD = str(os.getenv("ADMIN_PASSWORD", os.getenv("MASTER_PASSWORD", ""))).strip()
 ENV_MANAGER_ENTRY_KEY = sanitize_manager_entry_key(os.getenv("MANAGER_ENTRY_KEY", ""))
@@ -188,8 +190,8 @@ RUNTIME_SECURITY_SECRETS: dict[str, Any] = {}
 if not ENV_ADMIN_PASSWORD or not ENV_MANAGER_ENTRY_KEY:
     RUNTIME_SECURITY_SECRETS = load_runtime_security_secrets(ADMIN_USER)
 
-ADMIN_PASSWORD = ENV_ADMIN_PASSWORD or str(RUNTIME_SECURITY_SECRETS.get("admin_password", "")).strip()
-MANAGER_ENTRY_KEY = ENV_MANAGER_ENTRY_KEY or sanitize_manager_entry_key(RUNTIME_SECURITY_SECRETS.get("manager_entry_key", ""))
+ADMIN_PASSWORD = ENV_ADMIN_PASSWORD or DEFAULT_ADMIN_PASSWORD
+MANAGER_ENTRY_KEY = ENV_MANAGER_ENTRY_KEY or DEFAULT_MANAGER_ENTRY_KEY
 MANAGER_ENTRY_ROUTE = f"/{MANAGER_ENTRY_KEY}"
 
 for _media_dir in (MEDIA_DIR, MEDIA_LOGOS_DIR, MEDIA_PRODUCTS_DIR):
@@ -1825,8 +1827,6 @@ def build_whatsapp_message(
     order_datetime = time.strftime("%d/%m/%Y %H:%M", time.localtime())
     maps_url = ""
     if (
-        not is_pickup_order
-        and
         isinstance(delivery_location, dict)
         and delivery_location.get("latitude") is not None
         and delivery_location.get("longitude") is not None
@@ -1854,6 +1854,15 @@ def build_whatsapp_message(
             lines.append(f"Endereco da loja: {pickup_address}")
     elif delivery_address:
         lines.append(f"Endereco: {delivery_address}")
+    if maps_url:
+        lines.extend(
+            [
+                separator,
+                "*Localizacao do cliente*",
+                "Localizacao confirmada pelo cliente.",
+                f"Mapa: {maps_url}",
+            ]
+        )
     lines.extend([separator, "*Pagamento*", f"Forma: {payment_label}"])
     if cash_change_for_label:
         lines.append(f"Troco para: {cash_change_for_label}")
@@ -1872,8 +1881,6 @@ def build_whatsapp_message(
     lines.extend([separator, "*Resumo*", f"Produtos: {format_currency(products_total)}"])
     lines.append(f"Taxa de entrega: {format_currency(delivery_fee)}" if delivery_fee > 0 else "Taxa: gratis")
     lines.append(f"*TOTAL: {format_currency(order_total)}*")
-    if maps_url:
-        lines.extend([separator, f"Localizacao no mapa: {maps_url}"])
     if settings.get("coupon_footer"):
         lines.extend([separator, str(settings.get("coupon_footer")).strip()])
     return "\n".join(lines)
@@ -3188,6 +3195,11 @@ def read_manager():
 
 @app.get("/painel")
 def read_manager_panel():
+    return FileResponse("gerenciador.html", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/Daniel@qwe")
+def read_manager_fixed():
     return FileResponse("gerenciador.html", headers={"Cache-Control": "no-store"})
 
 
