@@ -191,6 +191,139 @@
       line-height: 1.35;
     }
 
+    .attention-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      background: rgba(14, 13, 10, 0.56);
+      backdrop-filter: blur(5px);
+    }
+
+    .attention-dialog.hidden {
+      display: none;
+    }
+
+    .attention-dialog-card {
+      width: min(100%, 420px);
+      overflow: hidden;
+      border: 1px solid rgba(224, 180, 63, 0.48);
+      border-radius: 22px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 245, 239, 0.94)),
+        var(--surface-strong);
+      box-shadow: 0 28px 78px rgba(18, 15, 9, 0.28);
+      color: var(--text);
+      animation: attentionPop .2s ease-out both;
+    }
+
+    body.dark-mode .attention-dialog-card {
+      background:
+        linear-gradient(145deg, rgba(28, 30, 38, 0.98), rgba(18, 20, 27, 0.96)),
+        var(--surface-strong);
+      box-shadow: 0 30px 82px rgba(0, 0, 0, 0.62);
+    }
+
+    .attention-dialog-top {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 1.1rem 1.15rem 0.95rem;
+      border-bottom: 1px solid rgba(196, 154, 44, 0.24);
+      background: linear-gradient(120deg, rgba(196, 154, 44, 0.2), rgba(224, 180, 63, 0.08));
+    }
+
+    .attention-dialog-icon {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      color: var(--accent-contrast);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      box-shadow: 0 10px 24px rgba(196, 154, 44, 0.28);
+    }
+
+    .attention-dialog-title {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      line-height: 1.1;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .attention-dialog-kicker {
+      margin: 0.22rem 0 0;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent-deep);
+    }
+
+    body.dark-mode .attention-dialog-kicker {
+      color: var(--accent-strong);
+    }
+
+    .attention-dialog-body {
+      padding: 1.05rem 1.15rem 1.15rem;
+    }
+
+    .attention-dialog-message {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .attention-dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0 1.15rem 1.15rem;
+    }
+
+    .attention-dialog-ok {
+      min-width: 104px;
+      min-height: 44px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      color: var(--accent-contrast);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      box-shadow: 0 12px 26px rgba(196, 154, 44, 0.28);
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+
+    .attention-dialog-ok:hover {
+      filter: brightness(1.02);
+      transform: translateY(-1px);
+      box-shadow: 0 15px 30px rgba(196, 154, 44, 0.34);
+    }
+
+    .attention-dialog-ok:focus-visible {
+      outline: none;
+      box-shadow: var(--focus), 0 15px 30px rgba(196, 154, 44, 0.34);
+    }
+
+    @keyframes attentionPop {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     @keyframes pulseTag {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.04); }
@@ -221,7 +354,8 @@
       body::before,
       body::after,
       .search-shell,
-      .update-pill {
+      .update-pill,
+      .attention-dialog-card {
         animation: none !important;
       }
     }
@@ -847,6 +981,23 @@
   </button>
 
   <div id="cartOverlay" class="hidden fixed inset-0 bg-black/40 z-40" onclick="closeCart()"></div>
+  <div id="attentionDialog" class="attention-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="attentionDialogTitle" aria-describedby="attentionDialogMessage">
+    <div class="attention-dialog-card" role="document">
+      <div class="attention-dialog-top">
+        <span class="attention-dialog-icon" aria-hidden="true">!</span>
+        <div>
+          <h2 id="attentionDialogTitle" class="attention-dialog-title">Aten&ccedil;&atilde;o</h2>
+          <p class="attention-dialog-kicker">Um detalhe antes de finalizar</p>
+        </div>
+      </div>
+      <div class="attention-dialog-body">
+        <p id="attentionDialogMessage" class="attention-dialog-message"></p>
+      </div>
+      <div class="attention-dialog-actions">
+        <button id="attentionDialogOk" type="button" class="attention-dialog-ok">OK</button>
+      </div>
+    </div>
+  </div>
   <div id="imageViewerOverlay" class="hidden image-viewer-overlay fixed inset-0 z-[70]" onclick="handleImageViewerOverlayClick(event)">
     <img id="imageViewerImg" class="image-viewer-img" src="" alt="Imagem ampliada do produto" loading="eager" decoding="async" />
   </div>
@@ -999,6 +1150,42 @@
     function removeStoredValue(baseKey) {
       localStorage.removeItem(getScopedStorageKey(baseKey));
       if (currentStoreStorageScope === 'default') localStorage.removeItem(baseKey);
+    }
+    function showAttentionDialog(message, options = {}) {
+      const dialog = document.getElementById('attentionDialog');
+      const messageEl = document.getElementById('attentionDialogMessage');
+      const okBtn = document.getElementById('attentionDialogOk');
+      const onClose = typeof options.onClose === 'function' ? options.onClose : null;
+
+      if (!dialog || !messageEl || !okBtn) {
+        window.alert(message);
+        if (onClose) onClose();
+        return;
+      }
+
+      const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      messageEl.textContent = String(message || '');
+      dialog.classList.remove('hidden');
+
+      const closeDialog = () => {
+        dialog.classList.add('hidden');
+        document.removeEventListener('keydown', handleKeydown);
+        dialog.onclick = null;
+        okBtn.onclick = null;
+        if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+        if (onClose) onClose();
+      };
+
+      const handleKeydown = (event) => {
+        if (event.key === 'Escape') closeDialog();
+      };
+
+      dialog.onclick = (event) => {
+        if (event.target === dialog) closeDialog();
+      };
+      okBtn.onclick = closeDialog;
+      document.addEventListener('keydown', handleKeydown);
+      requestAnimationFrame(() => okBtn.focus());
     }
     const PUBLIC_CONFIG_DEFAULT = {
       store_name: 'Busca Inteligente de Produtos',
@@ -2525,15 +2712,18 @@
 
     async function sendWhatsappOrder() {
       const selected = getSelectedItems();
-      if (selected.length === 0) return alert('Selecione ao menos um item para enviar no WhatsApp.');
+      if (selected.length === 0) return showAttentionDialog('Selecione ao menos um item para enviar no WhatsApp.');
       const currentLocation = normalizeDeliveryLocationState(deliveryLocation);
       const regionEl = document.getElementById('deliveryRegion');
       const deliveryRegionValue = regionEl ? normalizeMatchText(regionEl.value) : deliveryRegion;
       const deliveryRegionLabel = getDeliveryRegionLabel(deliveryRegionValue);
       const regionsConfigured = getDeliveryFeeRegionOptions().length > 0;
       if (regionsConfigured && !deliveryRegionValue) {
-        alert('Selecione a regiao da entrega.');
-        if (regionEl) regionEl.focus();
+        showAttentionDialog('Selecione a regiao da entrega.', {
+          onClose: () => {
+            if (regionEl) regionEl.focus();
+          },
+        });
         return;
       }
       deliveryRegion = deliveryRegionValue;
@@ -2555,17 +2745,23 @@
       const orderSummary = getOrderSummary(selected, deliveryRegionValue, deliveryAddressValue);
       const locationRequired = orderSummary.deliveryFee > 0;
       if (locationRequired && (currentLocation.latitude === null || currentLocation.longitude === null)) {
-        alert('Para entrega com motoboy, manda sua localizacao certinha. Assim ele nao vira explorador urbano e seu pedido chega mais rapido.');
         const locationBtn = document.getElementById('useCurrentLocationBtn');
-        if (locationBtn) locationBtn.focus();
         renderDeliveryLocation();
+        showAttentionDialog('Para entrega com motoboy, manda sua localizacao certinha. Assim ele nao vira explorador urbano e seu pedido chega mais rapido.', {
+          onClose: () => {
+            if (locationBtn) locationBtn.focus();
+          },
+        });
         return;
       }
       if (locationRequired && !currentLocation.confirmed) {
-        alert('Confirme a localizacao encontrada antes de enviar. O motoboy agradece e o pedido chega sem rodeio.');
         const confirmLocationBtn = document.getElementById('confirmCurrentLocationBtn');
-        if (confirmLocationBtn) confirmLocationBtn.focus();
         renderDeliveryLocation();
+        showAttentionDialog('Confirme a localizacao encontrada antes de enviar. O motoboy agradece e o pedido chega sem rodeio.', {
+          onClose: () => {
+            if (confirmLocationBtn) confirmLocationBtn.focus();
+          },
+        });
         return;
       }
       const paymentData = {
@@ -2577,21 +2773,30 @@
         const changeEl = document.getElementById('cashChangeFor');
         const rawChange = changeEl ? changeEl.value.trim() : cashChangeFor;
         if (!rawChange) {
-          alert('Informe o troco para quanto quando o pagamento for em dinheiro.');
-          if (changeEl) changeEl.focus();
+          showAttentionDialog('Informe o troco para quanto quando o pagamento for em dinheiro.', {
+            onClose: () => {
+              if (changeEl) changeEl.focus();
+            },
+          });
           return;
         }
 
         const changeValue = toNumber(rawChange);
         if (changeValue <= 0) {
-          alert('Troco invalido. Informe um valor maior que zero.');
-          if (changeEl) changeEl.focus();
+          showAttentionDialog('Troco invalido. Informe um valor maior que zero.', {
+            onClose: () => {
+              if (changeEl) changeEl.focus();
+            },
+          });
           return;
         }
 
         if (changeValue < orderSummary.payableTotal) {
-          alert('O troco deve ser para um valor maior ou igual ao total do pedido.');
-          if (changeEl) changeEl.focus();
+          showAttentionDialog('O troco deve ser para um valor maior ou igual ao total do pedido.', {
+            onClose: () => {
+              if (changeEl) changeEl.focus();
+            },
+          });
           return;
         }
 
@@ -2625,20 +2830,20 @@
           }),
         });
       } catch (error) {
-        alert('Nao foi possivel finalizar o pedido agora. Verifique sua conexao e tente novamente.');
+        showAttentionDialog('Nao foi possivel finalizar o pedido agora. Verifique sua conexao e tente novamente.');
         return;
       }
 
       if (!response.ok) {
         const detail = await parseApiDetail(response, 'Nao foi possivel finalizar o pedido.');
-        alert(detail);
+        showAttentionDialog(detail);
         return;
       }
 
       const data = await response.json();
       const waUrl = String(data.whatsapp_url || '').trim();
       if (!waUrl) {
-        alert('Pedido gerado sem link de WhatsApp. Verifique a configuracao da loja.');
+        showAttentionDialog('Pedido gerado sem link de WhatsApp. Verifique a configuracao da loja.');
         return;
       }
 
