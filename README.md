@@ -117,9 +117,9 @@ pip install -r requirements.txt
 ```
 
 ```bash
-uvicorn api:app --host 0.0.0.0 --port $PORT
+python -m uvicorn api:app --host 0.0.0.0 --port $PORT
 ```
 
-Importante: no campo **Start Command** do Render, nao coloque `web:` antes do comando.
-O prefixo `web:` pertence apenas ao arquivo `Procfile`.
+Importante: no campo **Start Command** do Render, nao coloque `web:` nem `$` antes do comando.
+O prefixo `web:` pertence apenas ao arquivo `Procfile`, e `$` e apenas o simbolo visual do terminal.
 
