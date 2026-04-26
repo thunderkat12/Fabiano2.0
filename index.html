@@ -878,13 +878,13 @@
         <textarea id="deliveryAddress" rows="2" placeholder="Ex: Rua X, 123, Bloco A, Apto 12"
           class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[72px]"></textarea>
       </div>
-      <div class="space-y-2">
+      <div id="deliveryLocationSection" class="hidden space-y-2">
         <div class="flex flex-col sm:flex-row gap-2">
           <button id="useCurrentLocationBtn" type="button" class="w-full sm:w-auto px-3 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition text-sm font-semibold min-h-[42px]">Usar minha localizacao</button>
           <button id="confirmCurrentLocationBtn" type="button" class="hidden w-full sm:w-auto px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition text-sm font-semibold min-h-[42px]">Confirmar localizacao</button>
           <button id="clearCurrentLocationBtn" type="button" class="hidden w-full sm:w-auto px-3 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition text-sm font-semibold min-h-[42px]">Limpar localizacao</button>
         </div>
-        <div id="deliveryLocationStatus" class="text-xs text-gray-500">Voce pode compartilhar sua localizacao para confirmar o endereco antes de enviar o pedido.</div>
+        <div id="deliveryLocationStatus" class="text-xs text-gray-500">Entrega com motoboy merece mapa certinho: mande sua localizacao e ajude o pedido a chegar sem turismo pela cidade.</div>
         <div id="deliveryLocationPreview" class="hidden rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-1">
           <div class="text-[11px] uppercase tracking-[0.12em] text-gray-500">Localizacao encontrada</div>
           <div id="deliveryLocationAddress" class="text-sm font-semibold text-gray-800"></div>
@@ -1172,7 +1172,21 @@
       }
       setStoredValue(DELIVERY_LOCATION_KEY, JSON.stringify(normalized));
     }
+    function getCurrentOrderContext() {
+      const selectedItems = getSelectedItems();
+      const regionEl = document.getElementById('deliveryRegion');
+      const deliveryRegionValue = regionEl ? normalizeMatchText(regionEl.value) : deliveryRegion;
+      const deliveryEl = document.getElementById('deliveryAddress');
+      const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : deliveryAddress;
+      const orderSummary = getOrderSummary(selectedItems, deliveryRegionValue, deliveryAddressValue);
+      return { selectedItems, deliveryRegionValue, deliveryAddressValue, orderSummary };
+    }
+    function isLocationRequiredForCurrentOrder() {
+      const { selectedItems, orderSummary } = getCurrentOrderContext();
+      return selectedItems.length > 0 && orderSummary.deliveryFee > 0;
+    }
     function renderDeliveryLocation() {
+      const locationSection = document.getElementById('deliveryLocationSection');
       const statusEl = document.getElementById('deliveryLocationStatus');
       const previewEl = document.getElementById('deliveryLocationPreview');
       const addressEl = document.getElementById('deliveryLocationAddress');
@@ -1182,19 +1196,23 @@
       const clearBtn = document.getElementById('clearCurrentLocationBtn');
       const state = normalizeDeliveryLocationState(deliveryLocation);
       deliveryLocation = state;
+      const locationRequired = isLocationRequiredForCurrentOrder();
+
+      if (locationSection) locationSection.classList.toggle('hidden', !locationRequired);
 
       if (statusEl) {
-        if (state.confirmed) statusEl.textContent = 'Localizacao confirmada. O pedido vai com coordenada exata para o dashboard.';
+        if (!locationRequired) statusEl.textContent = 'Localizacao so e solicitada quando houver entrega com taxa.';
+        else if (state.confirmed) statusEl.textContent = 'Localizacao confirmada. Agora o motoboy vai direto ao ponto, sem caça ao tesouro.';
         else if (state.status === 'loading') statusEl.textContent = 'Buscando sua localizacao atual...';
         else if (state.status === 'resolved') statusEl.textContent = 'Conferir o endereco encontrado e confirmar antes de enviar o pedido.';
         else if (state.status === 'error') statusEl.textContent = state.display_name || 'Nao foi possivel obter sua localizacao agora.';
-        else statusEl.textContent = 'Voce pode compartilhar sua localizacao para confirmar o endereco antes de enviar o pedido.';
+        else statusEl.textContent = 'Entrega com motoboy merece mapa certinho: mande sua localizacao e ajude o pedido a chegar sem turismo pela cidade.';
       }
 
       const hasPoint = state.latitude !== null && state.longitude !== null;
-      if (previewEl) previewEl.classList.toggle('hidden', !hasPoint);
-      if (confirmBtn) confirmBtn.classList.toggle('hidden', !(hasPoint && !state.confirmed));
-      if (clearBtn) clearBtn.classList.toggle('hidden', !hasPoint);
+      if (previewEl) previewEl.classList.toggle('hidden', !locationRequired || !hasPoint);
+      if (confirmBtn) confirmBtn.classList.toggle('hidden', !locationRequired || !(hasPoint && !state.confirmed));
+      if (clearBtn) clearBtn.classList.toggle('hidden', !locationRequired || !hasPoint);
       if (addressEl) addressEl.textContent = state.display_name || 'Ponto capturado sem endereco descritivo.';
       if (metaEl) {
         const parts = [];
@@ -1244,6 +1262,11 @@
       renderCart();
     }
     async function requestCurrentLocation() {
+      if (!isLocationRequiredForCurrentOrder()) {
+        const statusEl = document.getElementById('deliveryLocationStatus');
+        if (statusEl) statusEl.textContent = 'Escolha uma entrega com taxa para liberar a localizacao.';
+        return;
+      }
       if (!navigator.geolocation) {
         clearDeliveryLocation({ keepAddress: true, statusMessage: 'Seu navegador nao suporta geolocalizacao.' });
         return;
@@ -2359,6 +2382,7 @@
       document.getElementById('summaryDeliveryFee').textContent = formatCurrency(orderSummary.deliveryFee);
       document.getElementById('summaryPayable').textContent = formatCurrency(orderSummary.payableTotal);
       document.getElementById('summaryAll').textContent = formatCurrency(totals.totalAll);
+      renderDeliveryLocation();
 
       if (cart.length === 0) {
         cartItemsEl.innerHTML = '<div class="cart-empty text-sm">Carrinho vazio.</div>';
@@ -2503,10 +2527,6 @@
       const selected = getSelectedItems();
       if (selected.length === 0) return alert('Selecione ao menos um item para enviar no WhatsApp.');
       const currentLocation = normalizeDeliveryLocationState(deliveryLocation);
-      if (currentLocation.latitude !== null && currentLocation.longitude !== null && !currentLocation.confirmed) {
-        alert('Confirme a localizacao encontrada antes de enviar o pedido, ou limpe a localizacao pendente.');
-        return;
-      }
       const regionEl = document.getElementById('deliveryRegion');
       const deliveryRegionValue = regionEl ? normalizeMatchText(regionEl.value) : deliveryRegion;
       const deliveryRegionLabel = getDeliveryRegionLabel(deliveryRegionValue);
@@ -2533,6 +2553,21 @@
       setStoredValue(PAYMENT_METHOD_KEY, paymentMethod);
 
       const orderSummary = getOrderSummary(selected, deliveryRegionValue, deliveryAddressValue);
+      const locationRequired = orderSummary.deliveryFee > 0;
+      if (locationRequired && (currentLocation.latitude === null || currentLocation.longitude === null)) {
+        alert('Para entrega com motoboy, manda sua localizacao certinha. Assim ele nao vira explorador urbano e seu pedido chega mais rapido.');
+        const locationBtn = document.getElementById('useCurrentLocationBtn');
+        if (locationBtn) locationBtn.focus();
+        renderDeliveryLocation();
+        return;
+      }
+      if (locationRequired && !currentLocation.confirmed) {
+        alert('Confirme a localizacao encontrada antes de enviar. O motoboy agradece e o pedido chega sem rodeio.');
+        const confirmLocationBtn = document.getElementById('confirmCurrentLocationBtn');
+        if (confirmLocationBtn) confirmLocationBtn.focus();
+        renderDeliveryLocation();
+        return;
+      }
       const paymentData = {
         label: paymentMethod === 'dinheiro' ? 'Dinheiro' : 'PIX',
         changeForLabel: '',
@@ -2575,7 +2610,7 @@
             items: selected.map((item) => ({ id: item.id, qty: item.qty })),
             delivery_region: deliveryRegionValue,
             delivery_address: deliveryAddressValue,
-            delivery_location: currentLocation.confirmed ? {
+            delivery_location: locationRequired && currentLocation.confirmed ? {
               latitude: currentLocation.latitude,
               longitude: currentLocation.longitude,
               accuracy_meters: currentLocation.accuracy_meters,

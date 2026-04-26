@@ -1827,6 +1827,8 @@ def build_whatsapp_message(
     order_datetime = time.strftime("%d/%m/%Y %H:%M", time.localtime())
     maps_url = ""
     if (
+        delivery_fee > 0
+        and
         isinstance(delivery_location, dict)
         and delivery_location.get("latitude") is not None
         and delivery_location.get("longitude") is not None
@@ -2614,6 +2616,7 @@ def submit_order(payload: dict[str, Any]):
     delivery_fee = get_delivery_fee_for_order(settings, delivery_region, delivery_address)
     order_total = products_total + delivery_fee
     region_label = get_delivery_region_label(settings, delivery_region)
+    effective_delivery_location = client_delivery_location if delivery_fee > 0 else {}
 
     client_total = payload.get("client_total")
     if client_total is not None and abs(parse_price(client_total) - order_total) > 0.01:
@@ -2647,7 +2650,7 @@ def submit_order(payload: dict[str, Any]):
         protocol,
         region_label,
         delivery_address,
-        client_delivery_location,
+        effective_delivery_location,
         payment_method,
         cash_change_for_label,
         products_total,
@@ -2662,7 +2665,7 @@ def submit_order(payload: dict[str, Any]):
         "delivery_region": delivery_region,
         "delivery_region_label": region_label,
         "delivery_address": delivery_address,
-        "delivery_location": client_delivery_location,
+        "delivery_location": effective_delivery_location,
         "payment_method": payment_method,
         "cash_change_for": cash_change_for_value,
         "products_total": round(products_total, 2),
