@@ -1817,43 +1817,65 @@ def build_whatsapp_message(
     delivery_fee: float,
     order_total: float,
 ) -> str:
-    lines = []
-    coupon_title = str(settings.get("coupon_title", "") or "CUPOM DE PEDIDO")
-    lines.append(f"*{coupon_title} #{protocol}*")
-    lines.append(f"Protocolo: {protocol}")
-    if settings.get("coupon_message"):
-        lines.append(str(settings.get("coupon_message")))
-    if settings.get("coupon_address"):
-        lines.append(f"Endereco: {settings.get('coupon_address')}")
-    if delivery_region_label:
-        lines.append(f"Regiao de entrega: {delivery_region_label}")
-    if delivery_address:
-        lines.append(f"Endereco de entrega: {delivery_address}")
+    separator = "------------------------------"
+    store_name = str(settings.get("store_name", "") or "Fabiano Acessorios").strip()
+    coupon_title = str(settings.get("coupon_title", "") or "Pedido").strip()
+    is_pickup_order = is_pickup_delivery(delivery_region_label, "", delivery_address)
+    payment_label = "Dinheiro" if payment_method == "dinheiro" else "PIX"
+    order_datetime = time.strftime("%d/%m/%Y %H:%M", time.localtime())
+    maps_url = ""
     if (
+        not is_pickup_order
+        and
         isinstance(delivery_location, dict)
         and delivery_location.get("latitude") is not None
         and delivery_location.get("longitude") is not None
     ):
         latitude = float(delivery_location.get("latitude", 0) or 0)
         longitude = float(delivery_location.get("longitude", 0) or 0)
-        lines.append(f"Localizacao confirmada: https://www.google.com/maps?q={latitude:.7f},{longitude:.7f}")
-    lines.append(f"Forma de pagamento: {'Dinheiro' if payment_method == 'dinheiro' else 'PIX'}")
+        maps_url = f"https://www.google.com/maps?q={latitude:.7f},{longitude:.7f}"
+
+    lines = [
+        f"*{store_name}*",
+        f"*{coupon_title} #{protocol}*",
+        f"Data: {order_datetime}",
+        separator,
+    ]
+    if settings.get("coupon_message"):
+        lines.extend([str(settings.get("coupon_message")).strip(), separator])
+
+    lines.append("*Entrega*")
+    lines.append(f"Modalidade: {'Retirar na loja' if is_pickup_order else 'Entrega'}")
+    if delivery_region_label:
+        lines.append(f"Regiao: {delivery_region_label}")
+    if is_pickup_order:
+        pickup_address = str(settings.get("delivery_store_address", "") or settings.get("coupon_address", "") or "").strip()
+        if pickup_address:
+            lines.append(f"Endereco da loja: {pickup_address}")
+    elif delivery_address:
+        lines.append(f"Endereco: {delivery_address}")
+    lines.extend([separator, "*Pagamento*", f"Forma: {payment_label}"])
     if cash_change_for_label:
         lines.append(f"Troco para: {cash_change_for_label}")
-    lines.append("")
-    lines.append("*Itens selecionados:*")
+    lines.extend([separator, "*Itens*"])
+
     for index, item in enumerate(items, start=1):
         subtotal = float(item["subtotal"])
-        lines.append(
-            f"Pedido {index}: {item['description']} | Qtd {item['qty']} | Unit {format_currency(item['unit_price'])} | Subtotal {format_currency(subtotal)}"
+        lines.extend(
+            [
+                f"{index}. {item['description']}",
+                f"   Qtd: {item['qty']} | Unit: {format_currency(item['unit_price'])}",
+                f"   Subtotal: {format_currency(subtotal)}",
+            ]
         )
-    lines.append("")
-    lines.append(f"Total selecionado (produtos): {format_currency(products_total)}")
-    if delivery_fee > 0:
-        lines.append(f"Taxa de entrega: {format_currency(delivery_fee)}")
-    lines.append(f"Total do pedido: {format_currency(order_total)}")
+
+    lines.extend([separator, "*Resumo*", f"Produtos: {format_currency(products_total)}"])
+    lines.append(f"Taxa de entrega: {format_currency(delivery_fee)}" if delivery_fee > 0 else "Taxa: gratis")
+    lines.append(f"*TOTAL: {format_currency(order_total)}*")
+    if maps_url:
+        lines.extend([separator, f"Localizacao no mapa: {maps_url}"])
     if settings.get("coupon_footer"):
-        lines.append(str(settings.get("coupon_footer")))
+        lines.extend([separator, str(settings.get("coupon_footer")).strip()])
     return "\n".join(lines)
 
 

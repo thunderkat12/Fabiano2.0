@@ -1682,6 +1682,13 @@
       const found = getDeliveryFeeRegionOptions().find((item) => item.value === normalized);
       return found ? found.label : String(regionValue || '').trim();
     }
+    function isPickupDelivery(regionLabel, regionValue, addressValue) {
+      const pickupTokens = new Set(['retirar na loja', 'retirada na loja', 'retirar loja', 'retirada', 'pickup']);
+      return [regionLabel, regionValue, addressValue]
+        .map((item) => normalizeMatchText(item))
+        .filter(Boolean)
+        .some((item) => pickupTokens.has(item));
+    }
     function renderDeliveryRegionOptions() {
       const select = document.getElementById('deliveryRegion');
       if (!select) return;
@@ -2431,30 +2438,62 @@
       return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
     }
 
-    function buildWhatsappMessage(selectedItems, orderSummary, deliveryRegionLabel, deliveryAddressValue, protocol, paymentData) {
+    function buildWhatsappMessage(selectedItems, orderSummary, deliveryRegionLabel, deliveryAddressValue, protocol, paymentData, deliveryLocationState = null) {
+      const separator = '------------------------------';
       const lines = [];
-      const couponTitle = orderConfig.coupon_title || 'CUPOM DE PEDIDO';
+      const storeName = String(orderConfig.store_name || publicConfig.store_name || 'Fabiano Acessorios').trim();
+      const couponTitle = String(orderConfig.coupon_title || 'Pedido').trim();
+      const isPickupOrder = isPickupDelivery(deliveryRegionLabel, '', deliveryAddressValue);
+      const orderDate = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+      const locationState = deliveryLocationState && deliveryLocationState.latitude !== null && deliveryLocationState.longitude !== null ? deliveryLocationState : null;
+      const mapsUrl = (!isPickupOrder && locationState)
+        ? `https://www.google.com/maps?q=${Number(locationState.latitude).toFixed(7)},${Number(locationState.longitude).toFixed(7)}`
+        : '';
+
+      lines.push(`*${storeName}*`);
       lines.push(`*${couponTitle} #${protocol}*`);
-      lines.push(`Protocolo: ${protocol}`);
-      if (orderConfig.coupon_message) lines.push(orderConfig.coupon_message);
-      if (orderConfig.coupon_address) lines.push(`Endereco: ${orderConfig.coupon_address}`);
-      if (deliveryRegionLabel) lines.push(`Regiao de entrega: ${deliveryRegionLabel}`);
-      if (deliveryAddressValue) lines.push(`Endereco de entrega: ${deliveryAddressValue}`);
-      lines.push(`Forma de pagamento: ${paymentData.label}`);
+      lines.push(`Data: ${orderDate}`);
+      lines.push(separator);
+      if (orderConfig.coupon_message) {
+        lines.push(orderConfig.coupon_message);
+        lines.push(separator);
+      }
+      lines.push('*Entrega*');
+      lines.push(`Modalidade: ${isPickupOrder ? 'Retirar na loja' : 'Entrega'}`);
+      if (deliveryRegionLabel) lines.push(`Regiao: ${deliveryRegionLabel}`);
+      if (isPickupOrder) {
+        const pickupAddress = String(orderConfig.delivery_store_address || orderConfig.coupon_address || '').trim();
+        if (pickupAddress) lines.push(`Endereco da loja: ${pickupAddress}`);
+      } else if (deliveryAddressValue) {
+        lines.push(`Endereco: ${deliveryAddressValue}`);
+      }
+      lines.push(separator);
+      lines.push('*Pagamento*');
+      lines.push(`Forma: ${paymentData.label}`);
       if (paymentData.changeForLabel) lines.push(`Troco para: ${paymentData.changeForLabel}`);
-      lines.push('');
-      lines.push('*Itens selecionados:*');
+      lines.push(separator);
+      lines.push('*Itens*');
 
       selectedItems.forEach((item, index) => {
         const subtotal = item.price * item.qty;
-        lines.push(`Pedido ${index + 1}: ${item.description} | Qtd ${item.qty} | Unit ${formatCurrency(item.price)} | Subtotal ${formatCurrency(subtotal)}`);
+        lines.push(`${index + 1}. ${item.description}`);
+        lines.push(`   Qtd: ${item.qty} | Unit: ${formatCurrency(item.price)}`);
+        lines.push(`   Subtotal: ${formatCurrency(subtotal)}`);
       });
 
-      lines.push('');
-      lines.push(`Total selecionado (produtos): ${formatCurrency(orderSummary.productsTotal)}`);
-      if (orderSummary.deliveryFee > 0) lines.push(`Taxa de entrega: ${formatCurrency(orderSummary.deliveryFee)}`);
-      lines.push(`Total do pedido: ${formatCurrency(orderSummary.payableTotal)}`);
-      if (orderConfig.coupon_footer) lines.push(orderConfig.coupon_footer);
+      lines.push(separator);
+      lines.push('*Resumo*');
+      lines.push(`Produtos: ${formatCurrency(orderSummary.productsTotal)}`);
+      lines.push(orderSummary.deliveryFee > 0 ? `Taxa de entrega: ${formatCurrency(orderSummary.deliveryFee)}` : 'Taxa: gratis');
+      lines.push(`*TOTAL: ${formatCurrency(orderSummary.payableTotal)}*`);
+      if (mapsUrl) {
+        lines.push(separator);
+        lines.push(`Localizacao no mapa: ${mapsUrl}`);
+      }
+      if (orderConfig.coupon_footer) {
+        lines.push(separator);
+        lines.push(orderConfig.coupon_footer);
+      }
       return lines.join('\n');
     }
 
