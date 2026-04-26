@@ -313,6 +313,183 @@
       box-shadow: var(--focus), 0 15px 30px rgba(196, 154, 44, 0.34);
     }
 
+    .location-helper-card {
+      border: 1px solid rgba(196, 154, 44, 0.34);
+      border-radius: 14px;
+      padding: 0.85rem;
+      background:
+        linear-gradient(135deg, rgba(196, 154, 44, 0.12), rgba(255, 255, 255, 0.72)),
+        var(--surface-strong);
+      box-shadow: 0 12px 28px rgba(18, 15, 9, 0.08);
+    }
+
+    body.dark-mode .location-helper-card {
+      background:
+        linear-gradient(135deg, rgba(221, 180, 88, 0.15), rgba(21, 24, 32, 0.92)),
+        var(--surface-strong);
+    }
+
+    .location-helper-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .location-helper-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .location-helper-subtitle {
+      margin-top: 0.12rem;
+      font-size: 0.76rem;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+
+    .location-badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 0.22rem 0.58rem;
+      background: rgba(196, 154, 44, 0.16);
+      color: var(--accent-deep);
+      border: 1px solid rgba(196, 154, 44, 0.42);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    body.dark-mode .location-badge {
+      color: var(--accent-strong);
+    }
+
+    .location-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.55rem;
+    }
+
+    .location-primary-btn,
+    .location-confirm-btn,
+    .location-secondary-btn {
+      width: 100%;
+      min-height: 44px;
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: transform .16s ease, filter .16s ease, background-color .16s ease, opacity .16s ease;
+    }
+
+    .location-primary-btn {
+      background: var(--accent-contrast);
+      color: #fff;
+    }
+
+    body.dark-mode .location-primary-btn {
+      background: var(--accent);
+      color: var(--accent-contrast);
+    }
+
+    .location-confirm-btn {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .location-secondary-btn {
+      background: rgba(255, 255, 255, 0.62);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    body.dark-mode .location-secondary-btn {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .location-primary-btn:hover,
+    .location-confirm-btn:hover,
+    .location-secondary-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    .location-primary-btn:disabled,
+    .location-confirm-btn:disabled,
+    .location-secondary-btn:disabled {
+      cursor: wait;
+      opacity: 0.72;
+      transform: none;
+    }
+
+    .location-status-text {
+      margin-top: 0.65rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .location-step-list {
+      display: grid;
+      gap: 0.38rem;
+      margin-top: 0.75rem;
+    }
+
+    .location-step {
+      display: flex;
+      align-items: center;
+      gap: 0.46rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.3;
+    }
+
+    .location-step::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--border);
+      box-shadow: 0 0 0 3px rgba(196, 154, 44, 0.08);
+    }
+
+    .location-step.is-active {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .location-step.is-active::before {
+      background: var(--accent);
+    }
+
+    .location-step.is-done::before {
+      background: var(--success);
+    }
+
+    .location-preview-card {
+      margin-top: 0.7rem;
+      border-radius: 12px;
+      border: 1px solid rgba(196, 154, 44, 0.28);
+      background: rgba(255, 255, 255, 0.7);
+      padding: 0.8rem;
+    }
+
+    body.dark-mode .location-preview-card {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    @media (min-width: 640px) {
+      .location-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     @keyframes attentionPop {
       from {
         opacity: 0;
@@ -932,11 +1109,11 @@
             Ocultar
           </button>
         </div>
-        <p class="update-message">Busca semantica atualizada: entende termos com e sem acento, erros de digitacao e variacoes comuns.</p>
-        <ul class="update-tips" aria-label="Boas praticas de busca">
-          <li>Use marca + modelo para resultados mais precisos.</li>
-          <li>Digite com ou sem acento: o resultado deve ser o mesmo.</li>
-          <li>Se nao achar, tente apenas parte do nome do produto.</li>
+        <p class="update-message">Agora o cliente pode enviar a localizacao do pedido antes de finalizar, ajudando a entrega a localizar o endereco com mais precisao.</p>
+        <ul class="update-tips" aria-label="Novidades da localizacao">
+          <li>Pedidos com taxa de entrega solicitam a localizacao antes do envio.</li>
+          <li>O cliente confere o ponto encontrado e confirma antes de mandar no WhatsApp.</li>
+          <li>O processo reduz erros de endereco e melhora a organizacao da entrega.</li>
         </ul>
       </div>
 
@@ -1029,18 +1206,30 @@
         <textarea id="deliveryAddress" rows="2" placeholder="Ex: Rua X, 123, Bloco A, Apto 12"
           class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[72px]"></textarea>
       </div>
-      <div id="deliveryLocationSection" class="hidden space-y-2">
-        <div class="flex flex-col sm:flex-row gap-2">
-          <button id="useCurrentLocationBtn" type="button" class="w-full sm:w-auto px-3 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition text-sm font-semibold min-h-[42px]">Usar minha localizacao</button>
-          <button id="confirmCurrentLocationBtn" type="button" class="hidden w-full sm:w-auto px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition text-sm font-semibold min-h-[42px]">Confirmar localizacao</button>
-          <button id="clearCurrentLocationBtn" type="button" class="hidden w-full sm:w-auto px-3 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition text-sm font-semibold min-h-[42px]">Limpar localizacao</button>
+      <div id="deliveryLocationSection" class="hidden location-helper-card">
+        <div class="location-helper-head">
+          <div>
+            <div class="location-helper-title">Localizacao da entrega</div>
+            <div class="location-helper-subtitle">Use o botao abaixo e permita o acesso quando o celular perguntar.</div>
+          </div>
+          <span id="deliveryLocationBadge" class="location-badge">Pendente</span>
         </div>
-        <div id="deliveryLocationStatus" class="text-xs text-gray-500">Entrega com motoboy merece mapa certinho: mande sua localizacao e ajude o pedido a chegar sem turismo pela cidade.</div>
-        <div id="deliveryLocationPreview" class="hidden rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-1">
-          <div class="text-[11px] uppercase tracking-[0.12em] text-gray-500">Localizacao encontrada</div>
+        <div class="location-actions">
+          <button id="useCurrentLocationBtn" type="button" class="location-primary-btn">Enviar minha localizacao</button>
+          <button id="confirmCurrentLocationBtn" type="button" class="hidden location-confirm-btn">Confirmar ponto encontrado</button>
+          <button id="clearCurrentLocationBtn" type="button" class="hidden location-secondary-btn">Refazer localizacao</button>
+        </div>
+        <div id="deliveryLocationStatus" class="location-status-text">Envie sua localizacao para ajudar a entrega a localizar o endereco com mais precisao.</div>
+        <div class="location-step-list" aria-label="Passos para enviar a localizacao">
+          <div id="deliveryLocationStepCapture" class="location-step is-active">Toque em enviar localizacao</div>
+          <div id="deliveryLocationStepAllow" class="location-step">Permita o acesso no aviso do celular</div>
+          <div id="deliveryLocationStepConfirm" class="location-step">Confira e confirme o ponto encontrado</div>
+        </div>
+        <div id="deliveryLocationPreview" class="hidden location-preview-card space-y-1">
+          <div class="text-[11px] uppercase tracking-[0.12em] text-gray-500">Ponto encontrado</div>
           <div id="deliveryLocationAddress" class="text-sm font-semibold text-gray-800"></div>
           <div id="deliveryLocationMeta" class="text-xs text-gray-500"></div>
-          <a id="deliveryLocationMapLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs font-semibold text-indigo-700 hover:text-indigo-800">Ver ponto no mapa</a>
+          <a id="deliveryLocationMapLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs font-semibold text-indigo-700 hover:text-indigo-800">Ver no mapa</a>
         </div>
       </div>
     </div>
@@ -1099,8 +1288,8 @@
     const SEARCH_HISTORY_KEY = 'fabiano_search_history_v1';
     const THEME_KEY = 'fabiano_theme_v1';
     const WARNING_LOG_KEY = 'fabiano_warning_logs_v1';
-    const RELEASE_VERSION = 'v1.3.1';
-    const RELEASE_DATE = '28 fev 2026';
+    const RELEASE_VERSION = 'v1.3.2';
+    const RELEASE_DATE = '01 maio 2026';
     const RELEASE_DISMISS_KEY = `fabiano_release_dismissed_${RELEASE_VERSION}`;
     const RESULTS_PER_PAGE = 5;
     const MAX_RECENT_SEARCHES = 8;
@@ -1372,6 +1561,22 @@
       const { selectedItems, orderSummary } = getCurrentOrderContext();
       return selectedItems.length > 0 && orderSummary.deliveryFee > 0;
     }
+    function setLocationStepState(element, state) {
+      if (!element) return;
+      element.classList.toggle('is-active', state === 'active');
+      element.classList.toggle('is-done', state === 'done');
+    }
+    function scrollDeliveryLocationIntoView() {
+      const locationSection = document.getElementById('deliveryLocationSection');
+      if (locationSection && !locationSection.classList.contains('hidden')) {
+        locationSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    function focusDeliveryLocationAction(action = 'use') {
+      const targetId = action === 'confirm' ? 'confirmCurrentLocationBtn' : 'useCurrentLocationBtn';
+      const btn = document.getElementById(targetId);
+      if (btn && !btn.classList.contains('hidden') && !btn.disabled) btn.focus();
+    }
     function renderDeliveryLocation() {
       const locationSection = document.getElementById('deliveryLocationSection');
       const statusEl = document.getElementById('deliveryLocationStatus');
@@ -1379,27 +1584,54 @@
       const addressEl = document.getElementById('deliveryLocationAddress');
       const metaEl = document.getElementById('deliveryLocationMeta');
       const linkEl = document.getElementById('deliveryLocationMapLink');
+      const badgeEl = document.getElementById('deliveryLocationBadge');
+      const useBtn = document.getElementById('useCurrentLocationBtn');
       const confirmBtn = document.getElementById('confirmCurrentLocationBtn');
       const clearBtn = document.getElementById('clearCurrentLocationBtn');
+      const captureStep = document.getElementById('deliveryLocationStepCapture');
+      const allowStep = document.getElementById('deliveryLocationStepAllow');
+      const confirmStep = document.getElementById('deliveryLocationStepConfirm');
       const state = normalizeDeliveryLocationState(deliveryLocation);
       deliveryLocation = state;
       const locationRequired = isLocationRequiredForCurrentOrder();
+      const hasPoint = state.latitude !== null && state.longitude !== null;
+      const isLoading = state.status === 'loading';
 
       if (locationSection) locationSection.classList.toggle('hidden', !locationRequired);
 
-      if (statusEl) {
-        if (!locationRequired) statusEl.textContent = 'Localizacao so e solicitada quando houver entrega com taxa.';
-        else if (state.confirmed) statusEl.textContent = 'Localizacao confirmada. Agora o motoboy vai direto ao ponto, sem caça ao tesouro.';
-        else if (state.status === 'loading') statusEl.textContent = 'Buscando sua localizacao atual...';
-        else if (state.status === 'resolved') statusEl.textContent = 'Conferir o endereco encontrado e confirmar antes de enviar o pedido.';
-        else if (state.status === 'error') statusEl.textContent = state.display_name || 'Nao foi possivel obter sua localizacao agora.';
-        else statusEl.textContent = 'Entrega com motoboy merece mapa certinho: mande sua localizacao e ajude o pedido a chegar sem turismo pela cidade.';
+      if (badgeEl) {
+        if (!locationRequired) badgeEl.textContent = 'Opcional';
+        else if (state.confirmed) badgeEl.textContent = 'Confirmada';
+        else if (isLoading) badgeEl.textContent = 'Buscando';
+        else if (hasPoint) badgeEl.textContent = 'Conferir';
+        else badgeEl.textContent = 'Pendente';
       }
 
-      const hasPoint = state.latitude !== null && state.longitude !== null;
+      if (useBtn) {
+        useBtn.disabled = isLoading;
+        if (isLoading) useBtn.textContent = 'Buscando localizacao...';
+        else if (state.confirmed) useBtn.textContent = 'Atualizar localizacao';
+        else if (hasPoint) useBtn.textContent = 'Capturar novamente';
+        else useBtn.textContent = 'Enviar minha localizacao';
+      }
+      if (confirmBtn) confirmBtn.disabled = isLoading;
+      if (clearBtn) clearBtn.disabled = isLoading;
+
+      if (statusEl) {
+        if (!locationRequired) statusEl.textContent = 'Localizacao so e solicitada quando houver entrega com taxa.';
+        else if (state.confirmed) statusEl.textContent = 'Pronto. Sua localizacao foi confirmada e vai junto com o pedido.';
+        else if (isLoading) statusEl.textContent = 'Aguarde alguns segundos. Se aparecer um aviso do celular, toque em Permitir.';
+        else if (hasPoint) statusEl.textContent = 'Localizacao encontrada. Confira o ponto e toque em confirmar para continuar.';
+        else if (state.status === 'error') statusEl.textContent = state.display_name || 'Nao foi possivel obter sua localizacao agora.';
+        else statusEl.textContent = 'Envie sua localizacao para ajudar a entrega a localizar o endereco com mais precisao.';
+      }
+
       if (previewEl) previewEl.classList.toggle('hidden', !locationRequired || !hasPoint);
       if (confirmBtn) confirmBtn.classList.toggle('hidden', !locationRequired || !(hasPoint && !state.confirmed));
       if (clearBtn) clearBtn.classList.toggle('hidden', !locationRequired || !hasPoint);
+      setLocationStepState(captureStep, hasPoint ? 'done' : 'active');
+      setLocationStepState(allowStep, isLoading ? 'active' : (hasPoint ? 'done' : 'idle'));
+      setLocationStepState(confirmStep, state.confirmed ? 'done' : (hasPoint ? 'active' : 'idle'));
       if (addressEl) addressEl.textContent = state.display_name || 'Ponto capturado sem endereco descritivo.';
       if (metaEl) {
         const parts = [];
@@ -1460,6 +1692,7 @@
       }
       deliveryLocation = { ...createEmptyDeliveryLocation(), status: 'loading' };
       renderDeliveryLocation();
+      scrollDeliveryLocationIntoView();
       navigator.geolocation.getCurrentPosition(async (position) => {
         const latitude = Number(position.coords.latitude);
         const longitude = Number(position.coords.longitude);
@@ -1481,6 +1714,8 @@
             display_name: String(data.display_name || '').trim(),
           });
           renderDeliveryLocation();
+          scrollDeliveryLocationIntoView();
+          focusDeliveryLocationAction('confirm');
         } catch (error) {
           deliveryLocation = normalizeDeliveryLocationState({
             status: 'resolved',
@@ -1492,6 +1727,8 @@
             display_name: 'Localizacao capturada, mas nao foi possivel traduzir para endereco agora.',
           });
           renderDeliveryLocation();
+          scrollDeliveryLocationIntoView();
+          focusDeliveryLocationAction('confirm');
         }
       }, (error) => {
         const messageMap = {
@@ -1500,6 +1737,8 @@
           3: 'Tempo esgotado ao tentar obter sua localizacao.',
         };
         clearDeliveryLocation({ keepAddress: true, statusMessage: messageMap[error?.code] || 'Nao foi possivel obter sua localizacao.' });
+        scrollDeliveryLocationIntoView();
+        focusDeliveryLocationAction('use');
       }, {
         enableHighAccuracy: true,
         timeout: 15000,
@@ -2747,7 +2986,8 @@
       if (locationRequired && (currentLocation.latitude === null || currentLocation.longitude === null)) {
         const locationBtn = document.getElementById('useCurrentLocationBtn');
         renderDeliveryLocation();
-        showAttentionDialog('Para entrega com motoboy, manda sua localizacao certinha. Assim ele nao vira explorador urbano e seu pedido chega mais rapido.', {
+        scrollDeliveryLocationIntoView();
+        showAttentionDialog('Para continuar, envie sua localizacao. Toque em Enviar minha localizacao e permita o acesso quando o celular perguntar.', {
           onClose: () => {
             if (locationBtn) locationBtn.focus();
           },
@@ -2757,7 +2997,8 @@
       if (locationRequired && !currentLocation.confirmed) {
         const confirmLocationBtn = document.getElementById('confirmCurrentLocationBtn');
         renderDeliveryLocation();
-        showAttentionDialog('Confirme a localizacao encontrada antes de enviar. O motoboy agradece e o pedido chega sem rodeio.', {
+        scrollDeliveryLocationIntoView();
+        showAttentionDialog('Confirme o ponto encontrado para incluir a localizacao no pedido.', {
           onClose: () => {
             if (confirmLocationBtn) confirmLocationBtn.focus();
           },
