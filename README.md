@@ -106,3 +106,20 @@ Observacao:
 - nao sobrescrever o alias `supabase` ja existente;
 - o alias novo deve coexistir com o projeto atual.
 
+---
+
+## Deploy no Render
+
+Use estes comandos no painel do Render:
+
+```bash
+pip install -r requirements.txt
+```
+
+```bash
+uvicorn api:app --host 0.0.0.0 --port $PORT
+```
+
+Importante: no campo **Start Command** do Render, nao coloque `web:` antes do comando.
+O prefixo `web:` pertence apenas ao arquivo `Procfile`.
+
