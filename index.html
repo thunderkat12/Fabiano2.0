@@ -605,6 +605,8 @@
     .result-price {
       color: var(--success);
       letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .search-highlight {
@@ -674,6 +676,8 @@
 
     .cart-subtotal {
       color: var(--success);
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     @media (min-width: 640px) {
@@ -874,6 +878,20 @@
         <textarea id="deliveryAddress" rows="2" placeholder="Ex: Rua X, 123, Bloco A, Apto 12"
           class="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[72px]"></textarea>
       </div>
+      <div class="space-y-2">
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button id="useCurrentLocationBtn" type="button" class="w-full sm:w-auto px-3 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition text-sm font-semibold min-h-[42px]">Usar minha localizacao</button>
+          <button id="confirmCurrentLocationBtn" type="button" class="hidden w-full sm:w-auto px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition text-sm font-semibold min-h-[42px]">Confirmar localizacao</button>
+          <button id="clearCurrentLocationBtn" type="button" class="hidden w-full sm:w-auto px-3 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition text-sm font-semibold min-h-[42px]">Limpar localizacao</button>
+        </div>
+        <div id="deliveryLocationStatus" class="text-xs text-gray-500">Voce pode compartilhar sua localizacao para confirmar o endereco antes de enviar o pedido.</div>
+        <div id="deliveryLocationPreview" class="hidden rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-1">
+          <div class="text-[11px] uppercase tracking-[0.12em] text-gray-500">Localizacao encontrada</div>
+          <div id="deliveryLocationAddress" class="text-sm font-semibold text-gray-800"></div>
+          <div id="deliveryLocationMeta" class="text-xs text-gray-500"></div>
+          <a id="deliveryLocationMapLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs font-semibold text-indigo-700 hover:text-indigo-800">Ver ponto no mapa</a>
+        </div>
+      </div>
     </div>
 
     <div class="px-3 sm:px-4 py-3 border-b space-y-2">
@@ -924,6 +942,7 @@
     const CART_KEY = 'fabiano_cart_v1';
     const DELIVERY_ADDRESS_KEY = 'fabiano_delivery_address_v1';
     const DELIVERY_REGION_KEY = 'fabiano_delivery_region_v1';
+    const DELIVERY_LOCATION_KEY = 'fabiano_delivery_location_v1';
     const PAYMENT_METHOD_KEY = 'fabiano_payment_method_v1';
     const CASH_CHANGE_FOR_KEY = 'fabiano_cash_change_for_v1';
     const SEARCH_HISTORY_KEY = 'fabiano_search_history_v1';
@@ -954,6 +973,33 @@
       xaomi: 'xiaomi',
       xiaomise: 'xiaomi',
     };
+    const currentStoreId = new URLSearchParams(window.location.search).get('store') || '';
+    const currentStoreStorageScope = currentStoreId || 'default';
+    function getScopedStorageKey(baseKey) {
+      return `${baseKey}::${currentStoreStorageScope}`;
+    }
+    function getStoredValue(baseKey, options = {}) {
+      const config = {
+        migrateLegacyForDefaultStore: options.migrateLegacyForDefaultStore !== false,
+      };
+      const scopedValue = localStorage.getItem(getScopedStorageKey(baseKey));
+      if (scopedValue !== null) return scopedValue;
+      if (config.migrateLegacyForDefaultStore && currentStoreStorageScope === 'default') {
+        const legacyValue = localStorage.getItem(baseKey);
+        if (legacyValue !== null) {
+          localStorage.setItem(getScopedStorageKey(baseKey), legacyValue);
+          return legacyValue;
+        }
+      }
+      return null;
+    }
+    function setStoredValue(baseKey, value) {
+      localStorage.setItem(getScopedStorageKey(baseKey), value);
+    }
+    function removeStoredValue(baseKey) {
+      localStorage.removeItem(getScopedStorageKey(baseKey));
+      if (currentStoreStorageScope === 'default') localStorage.removeItem(baseKey);
+    }
     const PUBLIC_CONFIG_DEFAULT = {
       store_name: 'Busca Inteligente de Produtos',
       store_tagline: 'Busca com filtros, paginacao e carrinho persistente.',
@@ -973,6 +1019,7 @@
     const ORDER_CONFIG_DEFAULT = {
       api_base_url: '',
       whatsapp_number: '',
+      whatsapp_destinations: '',
       coupon_title: 'CUPOM DE PEDIDO',
       coupon_message: 'Segue pedido com itens selecionados.',
       coupon_address: '',
@@ -987,6 +1034,7 @@
     let cart = [];
     let deliveryAddress = '';
     let deliveryRegion = '';
+    let deliveryLocation = null;
     let paymentMethod = 'pix';
     let cashChangeFor = '';
     let publicConfig = { ...PUBLIC_CONFIG_DEFAULT };
@@ -1001,6 +1049,7 @@
       loadCart();
       loadDeliveryAddress();
       loadDeliveryRegion();
+      loadDeliveryLocation();
       loadRecentSearches();
       cleanupTemporaryDataAndWarningLogs({ context: 'startup' });
       await loadPublicConfig();
@@ -1021,6 +1070,12 @@
       if (deliveryEl) deliveryEl.addEventListener('input', handleDeliveryAddressInput);
       const regionEl = document.getElementById('deliveryRegion');
       if (regionEl) regionEl.addEventListener('change', handleDeliveryRegionChange);
+      const useLocationBtn = document.getElementById('useCurrentLocationBtn');
+      if (useLocationBtn) useLocationBtn.addEventListener('click', requestCurrentLocation);
+      const confirmLocationBtn = document.getElementById('confirmCurrentLocationBtn');
+      if (confirmLocationBtn) confirmLocationBtn.addEventListener('click', confirmCurrentLocation);
+      const clearLocationBtn = document.getElementById('clearCurrentLocationBtn');
+      if (clearLocationBtn) clearLocationBtn.addEventListener('click', () => clearDeliveryLocation({ keepAddress: true, statusMessage: 'Localizacao removida. O pedido seguira apenas com o endereco digitado.' }));
       const paymentEl = document.getElementById('paymentMethod');
       if (paymentEl) paymentEl.addEventListener('change', handlePaymentMethodChange);
       const changeEl = document.getElementById('cashChangeFor');
@@ -1043,13 +1098,13 @@
       if (versionTag) versionTag.textContent = `Versao ${RELEASE_VERSION}`;
       if (dateTag) dateTag.textContent = RELEASE_DATE;
 
-      const dismissed = localStorage.getItem(RELEASE_DISMISS_KEY) === '1';
+      const dismissed = getStoredValue(RELEASE_DISMISS_KEY) === '1';
       banner.classList.toggle('hidden', dismissed);
 
       if (dismissBtn) {
         dismissBtn.addEventListener('click', () => {
           banner.classList.add('hidden');
-          localStorage.setItem(RELEASE_DISMISS_KEY, '1');
+          setStoredValue(RELEASE_DISMISS_KEY, '1');
         });
       }
     }
@@ -1069,8 +1124,221 @@
         });
       }
 
+      if (currentStoreId && !url.searchParams.has('store')) {
+        url.searchParams.set('store', currentStoreId);
+      }
+
       if (/^https?:\/\//i.test(baseUrl)) return url.toString();
       return `${url.pathname}${url.search}`;
+    }
+    function createEmptyDeliveryLocation() {
+      return {
+        status: 'idle',
+        confirmed: false,
+        source: '',
+        latitude: null,
+        longitude: null,
+        accuracy_meters: 0,
+        display_name: '',
+        confirmed_at: 0,
+      };
+    }
+    function normalizeCoordinate(value) {
+      const n = Number.parseFloat(String(value || '').replace(',', '.'));
+      return Number.isFinite(n) ? n : null;
+    }
+    function normalizeDeliveryLocationState(value) {
+      const base = createEmptyDeliveryLocation();
+      if (!value || typeof value !== 'object') return base;
+      const latitude = normalizeCoordinate(value.latitude);
+      const longitude = normalizeCoordinate(value.longitude);
+      return {
+        status: String(value.status || '').trim() || (latitude !== null && longitude !== null ? 'resolved' : 'idle'),
+        confirmed: Boolean(value.confirmed && latitude !== null && longitude !== null),
+        source: String(value.source || '').trim(),
+        latitude,
+        longitude,
+        accuracy_meters: Math.max(0, toNumber(value.accuracy_meters || value.accuracy || 0)),
+        display_name: String(value.display_name || value.address || '').trim(),
+        confirmed_at: Number(value.confirmed_at || 0) || 0,
+      };
+    }
+    function saveDeliveryLocation() {
+      const normalized = normalizeDeliveryLocationState(deliveryLocation);
+      deliveryLocation = normalized;
+      if (normalized.latitude === null || normalized.longitude === null) {
+        removeStoredValue(DELIVERY_LOCATION_KEY);
+        return;
+      }
+      setStoredValue(DELIVERY_LOCATION_KEY, JSON.stringify(normalized));
+    }
+    function renderDeliveryLocation() {
+      const statusEl = document.getElementById('deliveryLocationStatus');
+      const previewEl = document.getElementById('deliveryLocationPreview');
+      const addressEl = document.getElementById('deliveryLocationAddress');
+      const metaEl = document.getElementById('deliveryLocationMeta');
+      const linkEl = document.getElementById('deliveryLocationMapLink');
+      const confirmBtn = document.getElementById('confirmCurrentLocationBtn');
+      const clearBtn = document.getElementById('clearCurrentLocationBtn');
+      const state = normalizeDeliveryLocationState(deliveryLocation);
+      deliveryLocation = state;
+
+      if (statusEl) {
+        if (state.confirmed) statusEl.textContent = 'Localizacao confirmada. O pedido vai com coordenada exata para o dashboard.';
+        else if (state.status === 'loading') statusEl.textContent = 'Buscando sua localizacao atual...';
+        else if (state.status === 'resolved') statusEl.textContent = 'Conferir o endereco encontrado e confirmar antes de enviar o pedido.';
+        else if (state.status === 'error') statusEl.textContent = state.display_name || 'Nao foi possivel obter sua localizacao agora.';
+        else statusEl.textContent = 'Voce pode compartilhar sua localizacao para confirmar o endereco antes de enviar o pedido.';
+      }
+
+      const hasPoint = state.latitude !== null && state.longitude !== null;
+      if (previewEl) previewEl.classList.toggle('hidden', !hasPoint);
+      if (confirmBtn) confirmBtn.classList.toggle('hidden', !(hasPoint && !state.confirmed));
+      if (clearBtn) clearBtn.classList.toggle('hidden', !hasPoint);
+      if (addressEl) addressEl.textContent = state.display_name || 'Ponto capturado sem endereco descritivo.';
+      if (metaEl) {
+        const parts = [];
+        if (state.accuracy_meters > 0) parts.push(`Precisao aprox.: ${Math.round(state.accuracy_meters)} m`);
+        if (hasPoint) parts.push(`Lat ${state.latitude?.toFixed(6)} | Lng ${state.longitude?.toFixed(6)}`);
+        metaEl.textContent = parts.join(' • ');
+      }
+      if (linkEl) {
+        linkEl.href = hasPoint
+          ? `https://www.google.com/maps?q=${state.latitude},${state.longitude}`
+          : '#';
+      }
+    }
+    function loadDeliveryLocation() {
+      try {
+        const saved = getStoredValue(DELIVERY_LOCATION_KEY);
+        deliveryLocation = saved ? normalizeDeliveryLocationState(JSON.parse(saved)) : createEmptyDeliveryLocation();
+      } catch (error) {
+        deliveryLocation = createEmptyDeliveryLocation();
+      }
+      if (deliveryLocation.confirmed && deliveryLocation.display_name && !deliveryAddress) {
+        deliveryAddress = deliveryLocation.display_name;
+        const field = document.getElementById('deliveryAddress');
+        if (field) field.value = deliveryAddress;
+      }
+      renderDeliveryLocation();
+    }
+    function clearDeliveryLocation(options = {}) {
+      const config = {
+        keepAddress: options.keepAddress !== false,
+        statusMessage: String(options.statusMessage || '').trim(),
+      };
+      const state = createEmptyDeliveryLocation();
+      deliveryLocation = state;
+      removeStoredValue(DELIVERY_LOCATION_KEY);
+      if (!config.keepAddress) {
+        deliveryAddress = '';
+        const field = document.getElementById('deliveryAddress');
+        if (field) field.value = '';
+        removeStoredValue(DELIVERY_ADDRESS_KEY);
+      }
+      renderDeliveryLocation();
+      if (config.statusMessage) {
+        const statusEl = document.getElementById('deliveryLocationStatus');
+        if (statusEl) statusEl.textContent = config.statusMessage;
+      }
+      renderCart();
+    }
+    async function requestCurrentLocation() {
+      if (!navigator.geolocation) {
+        clearDeliveryLocation({ keepAddress: true, statusMessage: 'Seu navegador nao suporta geolocalizacao.' });
+        return;
+      }
+      deliveryLocation = { ...createEmptyDeliveryLocation(), status: 'loading' };
+      renderDeliveryLocation();
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const latitude = Number(position.coords.latitude);
+        const longitude = Number(position.coords.longitude);
+        const accuracy = Math.max(0, Number(position.coords.accuracy || 0));
+        try {
+          const response = await fetch(buildApiUrlWithStore('/location/reverse-geocode', {
+            lat: latitude.toFixed(7),
+            lng: longitude.toFixed(7),
+          }));
+          if (!response.ok) throw new Error(await parseApiDetail(response, 'Nao foi possivel confirmar o endereco da sua localizacao.'));
+          const data = await response.json();
+          deliveryLocation = normalizeDeliveryLocationState({
+            status: 'resolved',
+            confirmed: false,
+            source: 'browser_geolocation',
+            latitude,
+            longitude,
+            accuracy_meters: accuracy,
+            display_name: String(data.display_name || '').trim(),
+          });
+          renderDeliveryLocation();
+        } catch (error) {
+          deliveryLocation = normalizeDeliveryLocationState({
+            status: 'resolved',
+            confirmed: false,
+            source: 'browser_geolocation',
+            latitude,
+            longitude,
+            accuracy_meters: accuracy,
+            display_name: 'Localizacao capturada, mas nao foi possivel traduzir para endereco agora.',
+          });
+          renderDeliveryLocation();
+        }
+      }, (error) => {
+        const messageMap = {
+          1: 'Permissao de localizacao negada.',
+          2: 'Nao foi possivel determinar sua localizacao.',
+          3: 'Tempo esgotado ao tentar obter sua localizacao.',
+        };
+        clearDeliveryLocation({ keepAddress: true, statusMessage: messageMap[error?.code] || 'Nao foi possivel obter sua localizacao.' });
+      }, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      });
+    }
+    function inferDeliveryRegionFromAddress(text) {
+      const normalized = normalizeMatchText(text);
+      if (!normalized) return '';
+      const options = getDeliveryFeeRegionOptions();
+      const matched = options.find((item) => normalized.includes(item.value));
+      return matched ? matched.value : '';
+    }
+    function confirmCurrentLocation() {
+      const state = normalizeDeliveryLocationState(deliveryLocation);
+      if (state.latitude === null || state.longitude === null) {
+        renderDeliveryLocation();
+        return;
+      }
+      state.confirmed = true;
+      state.status = 'resolved';
+      state.confirmed_at = Date.now() / 1000;
+      deliveryLocation = state;
+      if (state.display_name) {
+        deliveryAddress = state.display_name;
+        const field = document.getElementById('deliveryAddress');
+        if (field) field.value = state.display_name;
+        setStoredValue(DELIVERY_ADDRESS_KEY, deliveryAddress);
+      }
+      const inferredRegion = inferDeliveryRegionFromAddress(state.display_name);
+      if (inferredRegion) {
+        deliveryRegion = inferredRegion;
+        const regionField = document.getElementById('deliveryRegion');
+        if (regionField) regionField.value = inferredRegion;
+        setStoredValue(DELIVERY_REGION_KEY, inferredRegion);
+      }
+      saveDeliveryLocation();
+      renderDeliveryLocation();
+      renderCart();
+    }
+    async function parseApiDetail(response, fallbackMessage) {
+      if (!response) return fallbackMessage;
+      try {
+        const data = await response.json();
+        if (data && typeof data.detail === 'string' && data.detail.trim()) return data.detail.trim();
+      } catch (error) {
+        return fallbackMessage;
+      }
+      return fallbackMessage;
     }
     function toNumber(value) { const n = Number.parseFloat(String(value).replace(',', '.')); return Number.isFinite(n) ? n : 0; }
     function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0); }
@@ -1290,6 +1558,76 @@
         });
       return rendered;
     }
+    function normalizePhoneDigits(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+    function getWhatsappDestinationMatchKeys(label) {
+      const keys = new Set();
+      const rawLabel = String(label || '').trim();
+      const normalizedLabel = normalizeMatchText(rawLabel);
+      if (normalizedLabel) keys.add(normalizedLabel);
+
+      rawLabel.replace(/\(([^)]+)\)/g, (_, content) => {
+        const normalized = normalizeMatchText(content);
+        if (normalized) keys.add(normalized);
+        return _;
+      });
+
+      rawLabel.split(/[,;\/|-]+/)
+        .map((part) => normalizeMatchText(part))
+        .filter(Boolean)
+        .forEach((part) => keys.add(part));
+
+      return Array.from(keys);
+    }
+    function parseWhatsappDestinationEntries() {
+      const entries = [];
+      const seen = new Set();
+      const rawText = String(orderConfig.whatsapp_destinations || '').replace(/\r\n/g, '\n');
+      rawText.split('\n')
+        .map((line) => String(line || '').trim())
+        .filter(Boolean)
+        .forEach((line) => {
+          const match = line.match(/^(.*?)\s*(?:\||=|:)\s*(.+)$/);
+          if (!match) return;
+          const label = String(match[1] || '').trim();
+          const phone = normalizePhoneDigits(match[2]);
+          if (!label || !phone) return;
+          const key = normalizeMatchText(label);
+          if (!key || seen.has(key)) return;
+          seen.add(key);
+          entries.push({
+            key,
+            label,
+            phone,
+            matchKeys: getWhatsappDestinationMatchKeys(label),
+          });
+        });
+      return entries;
+    }
+    function resolveOrderWhatsappNumber(regionValue, regionLabel, addressValue) {
+      const fallbackPhone = normalizePhoneDigits(orderConfig.whatsapp_number || '');
+      const destinations = parseWhatsappDestinationEntries();
+      if (!destinations.length) return fallbackPhone;
+
+      const candidateTexts = [
+        normalizeMatchText(regionLabel),
+        normalizeMatchText(regionValue),
+        normalizeMatchText(addressValue),
+      ].filter(Boolean);
+
+      for (const candidate of candidateTexts) {
+        const exactMatch = destinations.find((item) => item.matchKeys.includes(candidate));
+        if (exactMatch) return exactMatch.phone;
+      }
+
+      for (const candidate of candidateTexts) {
+        const partialMatch = destinations.find((item) => item.matchKeys.some((key) => key.length >= 3 && candidate.includes(key)));
+        if (partialMatch) return partialMatch.phone;
+      }
+
+      return fallbackPhone;
+    }
     function getDeliveryFeeAmount() {
       const amount = toNumber(orderConfig.delivery_fee_amount);
       return amount > 0 ? amount : 0;
@@ -1373,7 +1711,7 @@
 
       deliveryRegion = '';
       select.value = '';
-      localStorage.removeItem(DELIVERY_REGION_KEY);
+      removeStoredValue(DELIVERY_REGION_KEY);
     }
     function getDeliveryFeeForOrder(regionValue, addressValue) {
       const rules = parseDeliveryFeeRuleEntries();
@@ -1418,7 +1756,7 @@
 
     function readWarningLogs() {
       try {
-        const raw = localStorage.getItem(WARNING_LOG_KEY);
+        const raw = getStoredValue(WARNING_LOG_KEY);
         const parsed = raw ? JSON.parse(raw) : [];
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
@@ -1427,7 +1765,7 @@
     }
 
     function saveWarningLogs(logs) {
-      localStorage.setItem(WARNING_LOG_KEY, JSON.stringify(logs));
+      setStoredValue(WARNING_LOG_KEY, JSON.stringify(logs));
     }
 
     function addWarningLog(message) {
@@ -1468,15 +1806,15 @@
         recentSearches = [];
         saveRecentSearches();
         saveWarningLogs([]);
-        localStorage.removeItem(CART_KEY);
-        localStorage.removeItem(SEARCH_HISTORY_KEY);
-        localStorage.removeItem(WARNING_LOG_KEY);
+        removeStoredValue(CART_KEY);
+        removeStoredValue(SEARCH_HISTORY_KEY);
+        removeStoredValue(WARNING_LOG_KEY);
 
         if (!config.keepAddress) {
           deliveryAddress = '';
           deliveryRegion = '';
-          localStorage.removeItem(DELIVERY_ADDRESS_KEY);
-          localStorage.removeItem(DELIVERY_REGION_KEY);
+          removeStoredValue(DELIVERY_ADDRESS_KEY);
+          removeStoredValue(DELIVERY_REGION_KEY);
         }
       }
     }
@@ -1499,8 +1837,8 @@
       cleanupTemporaryDataAndWarningLogs({ context: 'order_finalized', resetOrderState: true, keepAddress: true });
       paymentMethod = 'pix';
       cashChangeFor = '';
-      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
-      localStorage.removeItem(CASH_CHANGE_FOR_KEY);
+      setStoredValue(PAYMENT_METHOD_KEY, paymentMethod);
+      removeStoredValue(CASH_CHANGE_FOR_KEY);
       const paymentEl = document.getElementById('paymentMethod');
       if (paymentEl) paymentEl.value = paymentMethod;
       const changeEl = document.getElementById('cashChangeFor');
@@ -1513,7 +1851,7 @@
     }
 
     function loadTheme() {
-      currentTheme = localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+      currentTheme = getStoredValue(THEME_KEY) === 'dark' ? 'dark' : 'light';
     }
 
     function applyTheme() {
@@ -1526,13 +1864,13 @@
 
     function toggleTheme() {
       currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem(THEME_KEY, currentTheme);
+      setStoredValue(THEME_KEY, currentTheme);
       applyTheme();
     }
 
     function loadRecentSearches() {
       try {
-        const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
+        const saved = getStoredValue(SEARCH_HISTORY_KEY);
         const parsed = saved ? JSON.parse(saved) : [];
         recentSearches = Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
       } catch (error) {
@@ -1541,7 +1879,7 @@
     }
 
     function saveRecentSearches() {
-      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(recentSearches));
+      setStoredValue(SEARCH_HISTORY_KEY, JSON.stringify(recentSearches));
     }
 
     function addRecentSearch(query) {
@@ -1831,7 +2169,7 @@
 
     function loadCart() {
       try {
-        const saved = localStorage.getItem(CART_KEY);
+        const saved = getStoredValue(CART_KEY);
         cart = saved ? JSON.parse(saved) : [];
         if (!Array.isArray(cart)) cart = [];
       } catch (error) {
@@ -1839,17 +2177,17 @@
       }
     }
 
-    function saveCart() { localStorage.setItem(CART_KEY, JSON.stringify(cart)); }
+    function saveCart() { setStoredValue(CART_KEY, JSON.stringify(cart)); }
 
     function loadDeliveryAddress() {
-      const saved = localStorage.getItem(DELIVERY_ADDRESS_KEY) || '';
+      const saved = getStoredValue(DELIVERY_ADDRESS_KEY) || '';
       deliveryAddress = saved;
       const field = document.getElementById('deliveryAddress');
       if (field) field.value = saved;
     }
 
     function loadDeliveryRegion() {
-      const saved = String(localStorage.getItem(DELIVERY_REGION_KEY) || '').trim();
+      const saved = String(getStoredValue(DELIVERY_REGION_KEY) || '').trim();
       deliveryRegion = normalizeMatchText(saved);
       const field = document.getElementById('deliveryRegion');
       if (field && deliveryRegion) field.value = deliveryRegion;
@@ -1858,7 +2196,12 @@
     function handleDeliveryAddressInput() {
       const field = document.getElementById('deliveryAddress');
       deliveryAddress = field ? field.value.trim() : '';
-      localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
+      setStoredValue(DELIVERY_ADDRESS_KEY, deliveryAddress);
+      const state = normalizeDeliveryLocationState(deliveryLocation);
+      if (state.confirmed && deliveryAddress !== state.display_name) {
+        clearDeliveryLocation({ keepAddress: true, statusMessage: 'Endereco alterado manualmente. Confirme a localizacao novamente se quiser enviar coordenadas exatas.' });
+        return;
+      }
       renderCart();
     }
 
@@ -1866,9 +2209,9 @@
       const field = document.getElementById('deliveryRegion');
       deliveryRegion = field ? normalizeMatchText(field.value) : '';
       if (deliveryRegion) {
-        localStorage.setItem(DELIVERY_REGION_KEY, deliveryRegion);
+        setStoredValue(DELIVERY_REGION_KEY, deliveryRegion);
       } else {
-        localStorage.removeItem(DELIVERY_REGION_KEY);
+        removeStoredValue(DELIVERY_REGION_KEY);
       }
       renderCart();
     }
@@ -1882,9 +2225,9 @@
     }
 
     function loadPaymentState() {
-      const savedMethod = String(localStorage.getItem(PAYMENT_METHOD_KEY) || 'pix').toLowerCase();
+      const savedMethod = String(getStoredValue(PAYMENT_METHOD_KEY) || 'pix').toLowerCase();
       paymentMethod = savedMethod === 'dinheiro' ? 'dinheiro' : 'pix';
-      cashChangeFor = String(localStorage.getItem(CASH_CHANGE_FOR_KEY) || '').trim();
+      cashChangeFor = String(getStoredValue(CASH_CHANGE_FOR_KEY) || '').trim();
 
       const paymentEl = document.getElementById('paymentMethod');
       if (paymentEl) paymentEl.value = paymentMethod;
@@ -1898,11 +2241,11 @@
     function handlePaymentMethodChange() {
       const paymentEl = document.getElementById('paymentMethod');
       paymentMethod = paymentEl && paymentEl.value === 'dinheiro' ? 'dinheiro' : 'pix';
-      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
+      setStoredValue(PAYMENT_METHOD_KEY, paymentMethod);
 
       if (paymentMethod !== 'dinheiro') {
         cashChangeFor = '';
-        localStorage.removeItem(CASH_CHANGE_FOR_KEY);
+        removeStoredValue(CASH_CHANGE_FOR_KEY);
         const changeEl = document.getElementById('cashChangeFor');
         if (changeEl) changeEl.value = '';
       }
@@ -1915,9 +2258,9 @@
       const changeEl = document.getElementById('cashChangeFor');
       cashChangeFor = changeEl ? changeEl.value.trim() : '';
       if (cashChangeFor) {
-        localStorage.setItem(CASH_CHANGE_FOR_KEY, cashChangeFor);
+        setStoredValue(CASH_CHANGE_FOR_KEY, cashChangeFor);
       } else {
-        localStorage.removeItem(CASH_CHANGE_FOR_KEY);
+        removeStoredValue(CASH_CHANGE_FOR_KEY);
       }
     }
 
@@ -2115,9 +2458,14 @@
       return lines.join('\n');
     }
 
-    function sendWhatsappOrder() {
+    async function sendWhatsappOrder() {
       const selected = getSelectedItems();
       if (selected.length === 0) return alert('Selecione ao menos um item para enviar no WhatsApp.');
+      const currentLocation = normalizeDeliveryLocationState(deliveryLocation);
+      if (currentLocation.latitude !== null && currentLocation.longitude !== null && !currentLocation.confirmed) {
+        alert('Confirme a localizacao encontrada antes de enviar o pedido, ou limpe a localizacao pendente.');
+        return;
+      }
       const regionEl = document.getElementById('deliveryRegion');
       const deliveryRegionValue = regionEl ? normalizeMatchText(regionEl.value) : deliveryRegion;
       const deliveryRegionLabel = getDeliveryRegionLabel(deliveryRegionValue);
@@ -2129,20 +2477,19 @@
       }
       deliveryRegion = deliveryRegionValue;
       if (deliveryRegion) {
-        localStorage.setItem(DELIVERY_REGION_KEY, deliveryRegion);
+        setStoredValue(DELIVERY_REGION_KEY, deliveryRegion);
       } else {
-        localStorage.removeItem(DELIVERY_REGION_KEY);
+        removeStoredValue(DELIVERY_REGION_KEY);
       }
       const deliveryEl = document.getElementById('deliveryAddress');
       const deliveryAddressValue = deliveryEl ? deliveryEl.value.trim() : '';
       deliveryAddress = deliveryAddressValue;
-      localStorage.setItem(DELIVERY_ADDRESS_KEY, deliveryAddress);
-      const phone = String(orderConfig.whatsapp_number || '').replace(/\D/g, '');
-      if (!phone) return alert('WhatsApp nao configurado no sistema.');
+      setStoredValue(DELIVERY_ADDRESS_KEY, deliveryAddress);
+      saveDeliveryLocation();
 
       const paymentEl = document.getElementById('paymentMethod');
       paymentMethod = paymentEl && paymentEl.value === 'dinheiro' ? 'dinheiro' : 'pix';
-      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
+      setStoredValue(PAYMENT_METHOD_KEY, paymentMethod);
 
       const orderSummary = getOrderSummary(selected, deliveryRegionValue, deliveryAddressValue);
       const paymentData = {
@@ -2173,15 +2520,61 @@
         }
 
         cashChangeFor = rawChange;
-        localStorage.setItem(CASH_CHANGE_FOR_KEY, rawChange);
+        setStoredValue(CASH_CHANGE_FOR_KEY, rawChange);
         paymentData.changeForLabel = formatCurrency(changeValue);
       }
 
-      const protocol = generateOrderProtocol();
-      const msg = buildWhatsappMessage(selected, orderSummary, deliveryRegionLabel, deliveryAddressValue, protocol, paymentData);
+      let response;
+      try {
+        response = await fetch(buildApiUrlWithStore('/orders/submit'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store: currentStoreId || undefined,
+            items: selected.map((item) => ({ id: item.id, qty: item.qty })),
+            delivery_region: deliveryRegionValue,
+            delivery_address: deliveryAddressValue,
+            delivery_location: currentLocation.confirmed ? {
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+              accuracy_meters: currentLocation.accuracy_meters,
+              source: currentLocation.source || 'browser_geolocation',
+              display_name: currentLocation.display_name,
+              confirmed_at: currentLocation.confirmed_at || (Date.now() / 1000),
+            } : undefined,
+            payment_method: paymentMethod,
+            cash_change_for: paymentMethod === 'dinheiro' ? cashChangeFor : '',
+            client_total: orderSummary.payableTotal,
+            client_delivery_fee: orderSummary.deliveryFee,
+          }),
+        });
+      } catch (error) {
+        alert('Nao foi possivel finalizar o pedido agora. Verifique sua conexao e tente novamente.');
+        return;
+      }
+
+      if (!response.ok) {
+        const detail = await parseApiDetail(response, 'Nao foi possivel finalizar o pedido.');
+        alert(detail);
+        return;
+      }
+
+      const data = await response.json();
+      const waUrl = String(data.whatsapp_url || '').trim();
+      if (!waUrl) {
+        alert('Pedido gerado sem link de WhatsApp. Verifique a configuracao da loja.');
+        return;
+      }
+
       finalizeOrderAndResetState();
-      setStatus(`Pedido enviado. Protocolo ${protocol}. Total ${formatCurrency(orderSummary.payableTotal)}. Carrinho e historico foram limpos para um novo pedido.`, 'ok');
-      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      const protocol = String(data.protocol || '');
+      const syncStatus = String(data.sync_status || '');
+      const syncMessage = String(data.sync_message || '').trim();
+      let statusSuffix = '';
+      if (syncStatus === 'synced') statusSuffix = ' Sincronizado com o sistema da loja.';
+      else if (syncStatus === 'pending_retry') statusSuffix = ` Sincronizacao pendente.${syncMessage ? ` ${syncMessage}` : ''}`;
+      else if (syncMessage) statusSuffix = ` ${syncMessage}`;
+      setStatus(`Pedido enviado. Protocolo ${protocol}. Total ${formatCurrency(Number(data.order_total || orderSummary.payableTotal))}.${statusSuffix}`.trim(), 'ok');
       if (isLikelyMobileDevice()) {
         window.location.href = waUrl;
         return;

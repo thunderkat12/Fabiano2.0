@@ -7,3 +7,5 @@ venv/
 .vscode/
 *.log
 replit_prompt.md
+data/operations.sqlite3*
+data/auth/runtime_secrets.json

@@ -85,3 +85,24 @@ Comandos de lote do Windows (Batch) para orquestrar a inicialização.
 6.  **Backend** retorna JSON com os resultados.
 7.  **Frontend** recebe o JSON e desenha os cards dos produtos na tela.
 
+---
+
+## Supabase MCP no Codex
+
+Para este projeto, mantenha o servidor MCP `supabase` atual e adicione um segundo alias dedicado ao projeto Fabiano:
+
+```bash
+codex mcp add supabase_fabiano --url https://mcp.supabase.com/mcp?project_ref=gevkemqetvblxhhsfbcg
+codex mcp login supabase_fabiano
+```
+
+Depois, valide no Codex com `/mcp` ou no terminal com:
+
+```bash
+codex mcp list
+```
+
+Observacao:
+- nao sobrescrever o alias `supabase` ja existente;
+- o alias novo deve coexistir com o projeto atual.
+

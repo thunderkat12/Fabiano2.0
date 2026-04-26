@@ -6,6 +6,7 @@
   <title>Gerenciador - Busca de Produtos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <style>
     body { font-family: 'Outfit', sans-serif; }
     .admin-nav-btn {
@@ -133,6 +134,163 @@
       line-height: 1.35;
       margin-top: 4px;
     }
+    .dashboard-shell {
+      border: 1px solid #dbe4f2;
+      border-radius: 24px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at top right, rgba(165, 180, 252, 0.16), transparent 28%),
+        linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+      box-shadow: 0 16px 38px rgba(15, 23, 42, 0.05);
+    }
+    .dashboard-hero {
+      border-radius: 22px;
+      padding: 20px;
+      color: #ffffff;
+      background:
+        radial-gradient(circle at top left, rgba(224, 231, 255, 0.22), transparent 30%),
+        linear-gradient(135deg, #0f172a 0%, #1e293b 52%, #312e81 100%);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+    }
+    .dashboard-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+    }
+    .dashboard-kpi {
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+      min-height: 112px;
+      min-width: 0;
+    }
+    .dashboard-kpi-value {
+      font-size: clamp(1.05rem, 1.05vw + 0.55rem, 1.6rem);
+      line-height: 1.04;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 8px;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+    .dashboard-panel {
+      border: 1px solid #dbe4f2;
+      border-radius: 20px;
+      padding: 18px;
+      background: #ffffff;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.04);
+    }
+    .dashboard-list-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .dashboard-list-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .dashboard-rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 12px;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+    .dashboard-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    .dashboard-tag.warn {
+      color: #9a3412;
+      background: #fff7ed;
+      border-color: #fdba74;
+    }
+    .dashboard-tag.pickup {
+      color: #0f766e;
+      background: #ecfeff;
+      border-color: #67e8f9;
+    }
+    .dashboard-map-shell {
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid #dbe4f2;
+      background: #e2e8f0;
+      min-height: 320px;
+    }
+    .dashboard-map-empty {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(241, 245, 249, 0.97) 100%);
+      color: #475569;
+      z-index: 500;
+    }
+    .dashboard-map-empty.active {
+      display: flex;
+    }
+    #dashRegionMap {
+      min-height: 320px;
+    }
+    .dashboard-hour-row {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) 36px;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      color: #475569;
+    }
+    .dashboard-hour-track {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e2e8f0;
+    }
+    .dashboard-hour-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #4f46e5 0%, #8b5cf6 100%);
+    }
+    .leaflet-container {
+      font-family: 'Outfit', sans-serif;
+    }
+    .location-status-card {
+      border: 1px solid #dbe4f2;
+      border-radius: 18px;
+      padding: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
     @keyframes fadePanel {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
@@ -182,31 +340,134 @@
             <button onclick="logoutAdmin()" class="text-sm text-red-600 hover:text-red-700 self-start sm:self-auto min-h-[40px]">Sair</button>
           </div>
 
-          <section id="panel-dashboard" class="admin-panel-section bg-white border rounded-xl shadow-sm p-4 sm:p-5 space-y-4">
-            <div>
-              <h3 class="text-lg font-semibold text-slate-800">Dashboard</h3>
-              <p class="text-sm text-slate-500">Resumo rapido do catalogo e da operacao.</p>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              <article class="border rounded-lg p-3 bg-slate-50">
-                <p class="text-xs text-slate-500">Produtos cadastrados</p>
-                <p id="dashProductsTotal" class="text-2xl font-bold text-slate-900">0</p>
-              </article>
-              <article class="border rounded-lg p-3 bg-slate-50">
-                <p class="text-xs text-slate-500">WhatsApp de pedidos</p>
-                <p id="dashWhatsapp" class="text-sm font-semibold text-slate-800">Nao configurado</p>
-              </article>
-              <article class="border rounded-lg p-3 bg-slate-50">
-                <p class="text-xs text-slate-500">Logo configurada</p>
-                <p id="dashLogoState" class="text-sm font-semibold text-slate-800">Nao</p>
-              </article>
-              <article class="border rounded-lg p-3 bg-slate-50">
-                <p class="text-xs text-slate-500">Fotos na busca</p>
-                <p id="dashImagesState" class="text-sm font-semibold text-slate-800">Desligado</p>
-              </article>
-            </div>
-            <div class="text-xs text-slate-500">
-              Dica: comece por <strong>Catalogo</strong> para subir PDF e inserir imagens; depois ajuste identidade em <strong>Aparencia</strong>.
+          <section id="panel-dashboard" class="admin-panel-section space-y-4">
+            <div class="dashboard-shell space-y-4">
+              <div class="dashboard-hero space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div class="space-y-2 max-w-2xl">
+                    <div class="text-[11px] uppercase tracking-[0.22em] text-indigo-100/70">Operacao do dia</div>
+                    <h3 class="text-2xl md:text-3xl font-semibold">Dashboard comercial com rota por pedido, localizacao confirmada e leitura rapida da operacao.</h3>
+                    <p class="text-sm text-indigo-100/80">Acompanhamento em tempo real do que saiu hoje, com mapa exato dos pedidos, distancia da loja ao cliente e inicio manual da rota pelo painel.</p>
+                  </div>
+                  <div class="space-y-2 min-w-[220px]">
+                    <button type="button" onclick="loadDashboardMetrics(true)" class="w-full px-4 py-3 rounded-xl bg-white text-slate-900 font-semibold hover:bg-slate-100 transition min-h-[48px]">Atualizar agora</button>
+                    <div class="text-xs text-indigo-100/75">
+                      <span id="dashUpdatedAt">Ainda sem leitura carregada.</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="dashboard-pill">Catalogo: <strong id="dashCatalogTotal">0 produtos</strong></span>
+                  <span class="dashboard-pill">Fonte: <strong id="dashCatalogSource">Local JSON</strong></span>
+                  <span class="dashboard-pill">Sync pendente: <strong id="dashPendingSyncBadge">0</strong></span>
+                </div>
+              </div>
+
+              <div id="dashQualityNote" class="hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"></div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+                <article class="dashboard-kpi">
+                  <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Pedidos hoje</p>
+                  <p id="dashOrdersToday" class="dashboard-kpi-value">0</p>
+                </article>
+                <article class="dashboard-kpi">
+                  <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Itens vendidos</p>
+                  <p id="dashItemsSold" class="dashboard-kpi-value">0</p>
+                </article>
+                <article class="dashboard-kpi">
+                  <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Faturamento</p>
+                  <p id="dashRevenueToday" class="dashboard-kpi-value">R$ 0,00</p>
+                </article>
+                <article class="dashboard-kpi">
+                  <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Ticket medio</p>
+                  <p id="dashAverageTicket" class="dashboard-kpi-value">R$ 0,00</p>
+                </article>
+                <article class="dashboard-kpi">
+                  <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Taxa media</p>
+                  <p id="dashAverageDeliveryFee" class="dashboard-kpi-value">R$ 0,00</p>
+                </article>
+                <article class="dashboard-kpi">
+                  <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Regioes atendidas</p>
+                  <p id="dashRegionsServed" class="dashboard-kpi-value">0</p>
+                </article>
+              </div>
+
+              <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_360px] gap-4">
+                <div class="space-y-4">
+                  <section class="dashboard-panel space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 class="text-lg font-semibold text-slate-900">Top pecas do dia</h4>
+                        <p class="text-sm text-slate-500">Modelos mais vendidos hoje, considerando a soma das quantidades enviadas nos pedidos.</p>
+                      </div>
+                      <span class="dashboard-tag">Hoje</span>
+                    </div>
+                    <div id="dashTopProductsList" class="space-y-1 text-sm text-slate-600">
+                      <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">Carregando top pecas...</div>
+                    </div>
+                  </section>
+
+                  <section class="dashboard-panel space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 class="text-lg font-semibold text-slate-900">Mapa operacional de entregas</h4>
+                        <p class="text-sm text-slate-500">Mostra os pontos geocodificados dos pedidos do dia e destaca a rota da loja quando um pedido e selecionado.</p>
+                      </div>
+                      <span class="dashboard-tag">Leaflet + OSM</span>
+                    </div>
+                    <div class="dashboard-map-shell">
+                      <div id="dashMapEmptyState" class="dashboard-map-empty active">Carregando mapa do dia...</div>
+                      <div id="dashRegionMap"></div>
+                    </div>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <div>
+                          <h5 class="text-sm font-semibold text-slate-900">Ritmo por hora</h5>
+                          <p class="text-xs text-slate-500">Picos de pedidos ao longo do dia atual.</p>
+                        </div>
+                      </div>
+                      <div id="dashHourlyList" class="space-y-2">
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">Aguardando dados por hora...</div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                <div class="space-y-4">
+                  <section class="dashboard-panel space-y-4">
+                    <div>
+                      <h4 class="text-lg font-semibold text-slate-900">Regioes que mais sairam</h4>
+                      <p class="text-sm text-slate-500">Ranking das concentracoes de entrega do dia, mesmo quando uma regiao ainda nao tem coordenada.</p>
+                    </div>
+                    <div id="dashTopRegionsList" class="space-y-1 text-sm text-slate-600">
+                      <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">Carregando regioes...</div>
+                    </div>
+                  </section>
+
+                  <section class="dashboard-panel space-y-4">
+                    <div>
+                      <h4 class="text-lg font-semibold text-slate-900">Enderecos parecidos</h4>
+                      <p class="text-sm text-slate-500">Agrupamento dos enderecos mais repetidos ou preenchidos parcialmente.</p>
+                    </div>
+                    <div id="dashAddressClustersList" class="space-y-1 text-sm text-slate-600">
+                      <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">Carregando enderecos...</div>
+                    </div>
+                  </section>
+
+                  <section class="dashboard-panel space-y-4">
+                    <div>
+                      <h4 class="text-lg font-semibold text-slate-900">Roteiro do dia</h4>
+                      <p class="text-sm text-slate-500">Cada pedido mostra status da rota, tempo estimado e acao para iniciar ou concluir a entrega.</p>
+                    </div>
+                    <div id="dashRouteFocus" class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                      Selecione um pedido para abrir a rota da loja ate o cliente.
+                    </div>
+                    <div id="dashRouteOrdersList" class="space-y-2 text-sm text-slate-600">
+                      <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">Carregando roteiro...</div>
+                    </div>
+                  </section>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -216,7 +477,11 @@
               <p class="text-sm text-slate-500">Atualize por PDF e gerencie produtos com imagem.</p>
             </div>
 
-            <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
+            <div id="catalogReadonlyNotice" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Esta loja usa banco externo como fonte de verdade. O catalogo fica somente leitura neste painel.
+            </div>
+
+            <section id="catalogPdfSection" class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
               <div>
                 <h4 class="text-base font-semibold text-slate-800">Atualizar produtos via PDF</h4>
                 <p class="text-xs text-slate-500">Arraste um PDF para a area abaixo ou clique para selecionar.</p>
@@ -246,7 +511,7 @@
               </div>
             </section>
 
-            <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
+            <section id="catalogManageSection" class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <h4 class="text-base font-semibold text-slate-800">Gestao de produtos</h4>
@@ -263,7 +528,7 @@
               </div>
               <p id="productsSearchMeta" class="text-xs text-slate-500"></p>
 
-              <div class="border rounded-lg p-3 bg-white space-y-2">
+              <div id="catalogCreateSection" class="border rounded-lg p-3 bg-white space-y-2">
                 <p class="text-xs text-slate-500 font-medium">Adicionar novo produto</p>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
                   <input id="newProductId" type="text" class="p-2 border rounded min-h-[40px]" placeholder="Codigo" />
@@ -493,8 +758,18 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div class="md:col-span-2">
-                <label class="text-xs text-slate-500">WhatsApp destino (somente numeros)</label>
+                <label class="text-xs text-slate-500">WhatsApp padrao / fallback (somente numeros)</label>
                 <input id="cfgWhatsapp" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 5561995651684" />
+              </div>
+              <div class="md:col-span-2 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-xs text-slate-500">Destinos do WhatsApp por regiao</label>
+                  <button id="addWhatsappDestinationBtn" type="button" onclick="addWhatsappDestinationRow()" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[36px]">
+                    + Adicionar destino
+                  </button>
+                </div>
+                <div id="cfgWhatsappDestinationsList" class="space-y-2"></div>
+                <p id="cfgWhatsappDestinationsHint" class="text-[11px] text-slate-500">Maximo de 4 destinos. Se nao encontrar correspondencia, o sistema usa o WhatsApp padrao acima.</p>
               </div>
               <div class="md:col-span-2 space-y-2">
                 <div class="flex items-center justify-between gap-2">
@@ -505,6 +780,16 @@
                 </div>
                 <div id="cfgDeliveryFeeRulesList" class="space-y-2"></div>
                 <p class="text-[11px] text-slate-500">Exemplo: Ceilandia R$ 10,00 | Guara R$ 20,00</p>
+              </div>
+              <div class="md:col-span-2 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-xs text-slate-500">Coordenadas do mapa por regiao</label>
+                  <button type="button" onclick="addRegionMapPointRow()" class="px-3 py-1.5 text-xs bg-slate-900 text-white rounded hover:bg-slate-800 transition min-h-[36px]">
+                    + Ponto no mapa
+                  </button>
+                </div>
+                <div id="cfgRegionMapPointsList" class="space-y-2"></div>
+                <p class="text-[11px] text-slate-500">Use uma linha por regiao. Exemplo: Ceilandia | -15.8250 | -48.1040</p>
               </div>
               <div class="md:col-span-2">
                 <label class="text-xs text-slate-500">Titulo do cupom</label>
@@ -540,6 +825,196 @@
                 <input id="cfgApiBaseUrl" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: https://sua-api.onrender.com" />
               </div>
             </div>
+            <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3">
+              <div class="space-y-1">
+                <h4 class="text-base font-semibold text-slate-800">Integracao da loja</h4>
+                <p class="text-xs text-slate-500">Configure a loja para continuar local ou sincronizar catalogo e pedidos via banco externo.</p>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs text-slate-500">Modo da loja</label>
+                  <select id="cfgIntegrationMode" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
+                    <option value="local_json">Local JSON</option>
+                    <option value="external_db">Banco externo</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Engine do banco</label>
+                  <select id="cfgIntegrationDbEngine" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]">
+                    <option value="">Nao definido</option>
+                    <option value="sqlite">SQLite</option>
+                    <option value="sqlserver">SQL Server</option>
+                    <option value="postgresql">PostgreSQL</option>
+                    <option value="mysql">MySQL</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Host / endereco</label>
+                  <input id="cfgIntegrationDbHost" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 10.0.0.20" />
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Porta</label>
+                  <input id="cfgIntegrationDbPort" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: 1433" />
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Banco / schema</label>
+                  <input id="cfgIntegrationDbName" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Usuario</label>
+                  <input id="cfgIntegrationDbUser" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" />
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Senha</label>
+                  <input id="cfgIntegrationDbPassword" type="password" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Preencha so para alterar" />
+                  <p id="cfgIntegrationPasswordHint" class="text-[11px] text-slate-500 mt-1">Nenhuma senha salva.</p>
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Caminho SQLite / arquivo local</label>
+                  <input id="cfgIntegrationDbPath" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: C:\\dados\\cliente.db" />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-xs text-slate-500">Opcoes extras de conexao</label>
+                  <textarea id="cfgIntegrationConnectionOptions" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="JSON ou observacoes tecnicas opcionais"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-xs text-slate-500">SQL de healthcheck</label>
+                  <textarea id="cfgIntegrationHealthcheckSql" rows="2" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Ex: SELECT 1"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-xs text-slate-500">SQL do catalogo</label>
+                  <textarea id="cfgIntegrationCatalogQuery" rows="4" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Consulta que retorne colunas compatíveis: id, description, unit, price_sight, price_term, price_wholesale, stock, image_url"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-xs text-slate-500">SQL para inserir pedido</label>
+                  <textarea id="cfgIntegrationOrderInsertSql" rows="3" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Use parametros nomeados, ex: :protocol, :order_total, :delivery_address"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-xs text-slate-500">SQL para baixar estoque por item</label>
+                  <textarea id="cfgIntegrationStockUpdateSql" rows="3" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Use parametros nomeados, ex: :product_id, :qty"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-xs text-slate-500">SQL para finalizar pedido</label>
+                  <textarea id="cfgIntegrationOrderFinalizeSql" rows="3" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Opcional. Ex: update no status do pedido externo"></textarea>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <article class="border rounded-lg p-3 bg-white">
+                  <p class="text-xs text-slate-500">Status</p>
+                  <p id="integrationStatusBadge" class="text-sm font-semibold text-slate-800">idle</p>
+                </article>
+                <article class="border rounded-lg p-3 bg-white">
+                  <p class="text-xs text-slate-500">Ultimo healthcheck</p>
+                  <p id="integrationLastHealthcheck" class="text-sm font-semibold text-slate-800">Nunca</p>
+                </article>
+                <article class="border rounded-lg p-3 bg-white">
+                  <p class="text-xs text-slate-500">Ultimo sync catalogo</p>
+                  <p id="integrationLastCatalogSync" class="text-sm font-semibold text-slate-800">Nunca</p>
+                </article>
+                <article class="border rounded-lg p-3 bg-white">
+                  <p class="text-xs text-slate-500">Jobs pendentes</p>
+                  <p id="integrationPendingJobs" class="text-sm font-semibold text-slate-800">0</p>
+                </article>
+              </div>
+              <div id="integrationLastErrorWrap" class="hidden rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"></div>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button type="button" onclick="testIntegrationConnection()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[44px]">Testar conexao</button>
+                <button type="button" onclick="syncIntegrationCatalog()" class="w-full sm:w-auto px-4 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition min-h-[44px]">Sincronizar catalogo agora</button>
+                <button type="button" onclick="retryPendingOrders()" class="w-full sm:w-auto px-4 py-2 bg-amber-500 text-slate-900 rounded hover:bg-amber-400 transition min-h-[44px]">Reenviar pendentes</button>
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Pedidos pendentes</p>
+                  <button type="button" onclick="loadIntegrationOrders()" class="text-xs text-indigo-600 hover:text-indigo-700">Atualizar lista</button>
+                </div>
+                <div id="integrationPendingOrdersList" class="space-y-2 text-sm text-slate-600">
+                  <div class="border rounded-lg bg-white p-3">Nenhum pedido pendente.</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="border rounded-xl p-3 sm:p-4 bg-slate-50 space-y-4">
+              <div class="space-y-1">
+                <h4 class="text-base font-semibold text-slate-800">Localizacao das entregas</h4>
+                <p class="text-xs text-slate-500">Geocodifica o endereco digitado no pedido e persiste os pontos em uma tabela dedicada no Supabase.</p>
+              </div>
+              <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                <div class="space-y-1">
+                  <h5 class="text-sm font-semibold text-slate-800">Supabase da localizacao</h5>
+                  <p class="text-xs text-slate-500">Use a connection string Postgres do projeto Supabase. O valor fica salvo no servidor e o campo volta vazio ao recarregar.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-3">
+                  <div>
+                    <label class="text-xs text-slate-500">URL unica do Supabase</label>
+                    <input id="cfgLocationSupabaseDbUrl" type="password" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="postgresql://postgres:senha@db.seu-projeto.supabase.co:5432/postgres" autocomplete="new-password" />
+                    <p id="cfgLocationSupabaseHint" class="text-[11px] text-slate-500 mt-1">Nao configurado.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="text-xs text-slate-500">Cidade base</label>
+                  <input id="cfgDeliveryGeoCity" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: Brasilia" />
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Estado / UF</label>
+                  <input id="cfgDeliveryGeoState" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: DF" />
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500">Pais</label>
+                  <input id="cfgDeliveryGeoCountry" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: Brasil" />
+                </div>
+              </div>
+              <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+                <div class="space-y-1">
+                  <h5 class="text-sm font-semibold text-slate-800">Origem da rota</h5>
+                  <p class="text-xs text-slate-500">Informe a localizacao da loja para o dashboard calcular a rota mais rapida ate cada cliente.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs text-slate-500">Nome do ponto</label>
+                    <input id="cfgDeliveryStoreLabel" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: Loja principal" />
+                  </div>
+                  <div>
+                    <label class="text-xs text-slate-500">Endereco da loja</label>
+                    <input id="cfgDeliveryStoreAddress" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: QNN 10, Ceilandia" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs text-slate-500">Latitude da loja</label>
+                    <input id="cfgDeliveryStoreLatitude" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: -15.793889" />
+                  </div>
+                  <div>
+                    <label class="text-xs text-slate-500">Longitude da loja</label>
+                    <input id="cfgDeliveryStoreLongitude" type="text" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Ex: -47.882778" />
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <article class="location-status-card">
+                  <p class="text-xs text-slate-500">Provider</p>
+                  <p id="locationProvider" class="text-sm font-semibold text-slate-800">supabase_postgres</p>
+                </article>
+                <article class="location-status-card">
+                  <p class="text-xs text-slate-500">Tabela</p>
+                  <p id="locationTableStatus" class="text-sm font-semibold text-slate-800">Pendente</p>
+                </article>
+                <article class="location-status-card">
+                  <p class="text-xs text-slate-500">Registros</p>
+                  <p id="locationTotalRecords" class="text-sm font-semibold text-slate-800">0</p>
+                </article>
+              </div>
+              <div id="locationStatusMessage" class="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-600">
+                Configure o Supabase via SUPABASE_DB_URL ou DATABASE_URL para ativar a persistencia das localizacoes.
+              </div>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button type="button" onclick="testLocationIntegration()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition min-h-[44px]">Testar tabela Supabase</button>
+                <button type="button" onclick="syncTodayDeliveryLocations()" class="w-full sm:w-auto px-4 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition min-h-[44px]">Sincronizar entregas de hoje</button>
+                <button type="button" onclick="loadLocationStatus(true)" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Atualizar status</button>
+              </div>
+            </section>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <button onclick="saveConfig()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition min-h-[44px]">Salvar configuracoes</button>
               <button onclick="loadConfig()" class="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition min-h-[44px]">Recarregar</button>
@@ -555,6 +1030,7 @@
   </main>
 
   <script>
+    const currentAdminStoreId = new URLSearchParams(window.location.search).get('store') || '';
     let adminToken = sessionStorage.getItem('adminToken') || '';
     let adminSession = null;
     let selectedPdfFile = null;
@@ -563,8 +1039,23 @@
     const productsAdminLimit = 5;
     let productsAdminTotal = 0;
     const IMAGE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+    const MAX_WHATSAPP_DESTINATIONS = 4;
+    let adminCatalogReadOnly = false;
+    let adminDashboardMetrics = null;
+    let adminLocationStatus = null;
+    let adminDashboardMap = null;
+    let adminDashboardMapMarkers = [];
+    let adminDashboardRouteLine = null;
+    let adminDashboardStoreMarker = null;
+    let adminDashboardSelectedMarker = null;
+    let adminDashboardSelectedProtocol = '';
     let currentAdminSection = 'dashboard';
     const ADMIN_SECTIONS = ['dashboard', 'catalogo', 'aparencia', 'pedidos', 'configuracoes'];
+    const ROUTE_STATUS_LABELS = {
+      submitted: 'Aguardando saida',
+      route_started: 'Rota iniciada',
+      delivered: 'Entregue',
+    };
     const ADMIN_SEARCH_STOPWORDS = new Set(['a', 'as', 'o', 'os', 'um', 'uma', 'uns', 'umas', 'de', 'do', 'da', 'dos', 'das', 'e', 'em', 'no', 'na', 'nos', 'nas', 'para', 'com', 'sem']);
     const ADMIN_SEARCH_NORMALIZATION = {
       diplsay: 'display',
@@ -648,6 +1139,8 @@
       },
     };
     const THEME_PREVIEW_EMPTY_BACKGROUND = 'linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%)';
+    const CURRENCY_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const INTEGER_FORMATTER = new Intl.NumberFormat('pt-BR');
 
     window.onload = async function () {
       document.getElementById('loginUser').value = '';
@@ -656,6 +1149,7 @@
       setupPdfUploadHandlers();
       initThemeAppearanceTools();
       clearProductForm();
+      renderDashboardLoading();
       const logoPreview = document.getElementById('cfgStoreLogoPreview');
       if (logoPreview) {
         logoPreview.addEventListener('error', () => {
@@ -709,11 +1203,44 @@
         const isActive = String(btn.dataset.adminSection || '').trim().toLowerCase() === normalized;
         btn.classList.toggle('active', isActive);
       });
+      if (normalized === 'dashboard' && adminDashboardMap) {
+        window.setTimeout(() => adminDashboardMap.invalidateSize(), 120);
+      }
     }
 
     function toBool(value) {
       const text = String(value ?? '').trim().toLowerCase();
       return ['1', 'true', 'yes', 'sim', 'on'].includes(text);
+    }
+
+    function formatCurrency(value) {
+      return CURRENCY_FORMATTER.format(Number(value || 0));
+    }
+
+    function formatInteger(value) {
+      return INTEGER_FORMATTER.format(Math.max(0, Number(value || 0)));
+    }
+
+    function formatLocationSourceLabel(value) {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 'panel') return 'painel';
+      if (normalized === 'environment') return 'ambiente';
+      return 'ausente';
+    }
+
+    function buildLocationStatusText(status) {
+      const baseMessage = String(status?.message || 'Sem status de localizacao.');
+      return `${baseMessage} Origem ativa: ${formatLocationSourceLabel(status?.source)}.`;
+    }
+
+    function normalizeAdminText(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
     }
 
     function normalizeHexColor(value) {
@@ -823,25 +1350,620 @@
     }
 
     function updateDashboardCards() {
-      const productsEl = document.getElementById('dashProductsTotal');
-      if (productsEl) productsEl.textContent = String(Math.max(0, Number(productsAdminTotal || 0)));
+      const catalogTotal = document.getElementById('dashCatalogTotal');
+      if (catalogTotal) catalogTotal.textContent = `${formatInteger(productsAdminTotal)} produtos`;
 
-      const whatsappRaw = String(document.getElementById('cfgWhatsapp')?.value || '').trim();
-      const whatsappEl = document.getElementById('dashWhatsapp');
-      if (whatsappEl) whatsappEl.textContent = whatsappRaw || 'Nao configurado';
+      const integrationEl = document.getElementById('dashCatalogSource');
+      if (integrationEl) integrationEl.textContent = adminCatalogReadOnly ? 'Banco externo' : 'Local JSON';
 
-      const logoRaw = String(document.getElementById('cfgStoreLogoUrl')?.value || '').trim();
-      const logoEl = document.getElementById('dashLogoState');
-      if (logoEl) logoEl.textContent = logoRaw ? 'Sim' : 'Nao';
+      const pendingSyncEl = document.getElementById('dashPendingSyncBadge');
+      const pendingJobs = document.getElementById('integrationPendingJobs');
+      if (pendingSyncEl) pendingSyncEl.textContent = formatInteger(pendingJobs ? pendingJobs.textContent : 0);
+    }
 
-      const imagesEnabled = Boolean(document.getElementById('cfgShowProductImages')?.checked);
-      const imagesEl = document.getElementById('dashImagesState');
-      if (imagesEl) imagesEl.textContent = imagesEnabled ? 'Ligado' : 'Desligado';
+    function setDashboardNotice(message = '', tone = 'neutral') {
+      const el = document.getElementById('dashQualityNote');
+      if (!el) return;
+      if (!message) {
+        el.textContent = '';
+        el.className = 'hidden rounded-2xl border px-4 py-3 text-sm';
+        return;
+      }
+      el.textContent = message;
+      el.className = 'rounded-2xl border px-4 py-3 text-sm';
+      if (tone === 'error') {
+        el.classList.add('border-red-200', 'bg-red-50', 'text-red-800');
+      } else if (tone === 'warn') {
+        el.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-900');
+      } else {
+        el.classList.add('border-slate-200', 'bg-white/80', 'text-slate-600');
+      }
+    }
+
+    function setDashboardMapEmptyState(message = '') {
+      const el = document.getElementById('dashMapEmptyState');
+      if (!el) return;
+      el.textContent = message;
+      el.classList.toggle('active', Boolean(message));
+    }
+
+    function resetDashboardSummary(placeholders = {}) {
+      document.getElementById('dashOrdersToday').textContent = placeholders.orders_today || '0';
+      document.getElementById('dashItemsSold').textContent = placeholders.items_sold || '0';
+      document.getElementById('dashRevenueToday').textContent = placeholders.revenue || 'R$ 0,00';
+      document.getElementById('dashAverageTicket').textContent = placeholders.average_ticket || 'R$ 0,00';
+      document.getElementById('dashAverageDeliveryFee').textContent = placeholders.average_delivery_fee || 'R$ 0,00';
+      document.getElementById('dashRegionsServed').textContent = placeholders.regions_served || '0';
+    }
+
+    function renderDashboardLoading() {
+      resetDashboardSummary({
+        orders_today: '...',
+        items_sold: '...',
+        revenue: '...',
+        average_ticket: '...',
+        average_delivery_fee: '...',
+        regions_served: '...',
+      });
+      const loadingCard = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Carregando metricas operacionais de hoje...</div>';
+      document.getElementById('dashTopProductsList').innerHTML = loadingCard;
+      document.getElementById('dashTopRegionsList').innerHTML = loadingCard;
+      document.getElementById('dashAddressClustersList').innerHTML = loadingCard;
+      document.getElementById('dashHourlyList').innerHTML = loadingCard;
+      document.getElementById('dashRouteOrdersList').innerHTML = loadingCard;
+      document.getElementById('dashRouteFocus').innerHTML = 'Carregando roteiro operacional...';
+      document.getElementById('dashUpdatedAt').textContent = 'Atualizando leitura de hoje...';
+      setDashboardMapEmptyState('Carregando mapa do dia...');
+      setDashboardNotice('Buscando pedidos, localizacoes confirmadas e status das rotas do dia.', 'neutral');
+    }
+
+    function renderDashboardError(message) {
+      resetDashboardSummary();
+      const errorCard = `<div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">${escapeHtml(message || 'Nao foi possivel carregar o dashboard.')}</div>`;
+      document.getElementById('dashTopProductsList').innerHTML = errorCard;
+      document.getElementById('dashTopRegionsList').innerHTML = errorCard;
+      document.getElementById('dashAddressClustersList').innerHTML = errorCard;
+      document.getElementById('dashHourlyList').innerHTML = errorCard;
+      document.getElementById('dashRouteOrdersList').innerHTML = errorCard;
+      document.getElementById('dashRouteFocus').innerHTML = errorCard;
+      document.getElementById('dashUpdatedAt').textContent = 'Falha ao atualizar o dashboard.';
+      setDashboardMapEmptyState('Nao foi possivel carregar o mapa operacional.');
+      setDashboardNotice(message || 'Falha ao carregar metricas do dashboard.', 'error');
+    }
+
+    function clearDashboardMapLayers() {
+      if (!adminDashboardMap) return;
+      adminDashboardMapMarkers.forEach((marker) => {
+        if (marker && adminDashboardMap.hasLayer(marker)) adminDashboardMap.removeLayer(marker);
+      });
+      adminDashboardMapMarkers = [];
+      [adminDashboardRouteLine, adminDashboardStoreMarker, adminDashboardSelectedMarker].forEach((layer) => {
+        if (layer && adminDashboardMap.hasLayer(layer)) adminDashboardMap.removeLayer(layer);
+      });
+      adminDashboardRouteLine = null;
+      adminDashboardStoreMarker = null;
+      adminDashboardSelectedMarker = null;
+    }
+
+    function ensureDashboardMap() {
+      const host = document.getElementById('dashRegionMap');
+      if (!host || typeof window.L === 'undefined') return null;
+      if (!adminDashboardMap) {
+        adminDashboardMap = L.map(host, { zoomControl: true, scrollWheelZoom: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(adminDashboardMap);
+      }
+      return adminDashboardMap;
+    }
+
+    function formatDurationLabel(totalSeconds) {
+      const minutes = Math.max(0, Math.round(Number(totalSeconds || 0) / 60));
+      if (!minutes) return '0 min';
+      if (minutes < 60) return `${minutes} min`;
+      const hours = Math.floor(minutes / 60);
+      const remaining = minutes % 60;
+      return remaining ? `${hours}h ${remaining}min` : `${hours}h`;
+    }
+
+    function getSelectedRouteOrder() {
+      const items = Array.isArray(adminDashboardMetrics?.route_orders) ? adminDashboardMetrics.route_orders : [];
+      if (!items.length) return null;
+      return items.find((item) => String(item.protocol || '') === adminDashboardSelectedProtocol) || items[0] || null;
+    }
+
+    function renderDashboardMap(points, exactMode = false, selectedRouteOrder = null, storeOrigin = null) {
+      const map = ensureDashboardMap();
+      if (!map) {
+        setDashboardMapEmptyState('Mapa indisponivel neste navegador.');
+        return;
+      }
+
+      clearDashboardMapLayers();
+      const selectedRoute = selectedRouteOrder && selectedRouteOrder.route && selectedRouteOrder.route.status === 'ok'
+        ? selectedRouteOrder.route
+        : null;
+      const storeReady = storeOrigin && Number.isFinite(Number(storeOrigin.latitude)) && Number.isFinite(Number(storeOrigin.longitude));
+      if (selectedRoute && selectedRoute.geometry && Array.isArray(selectedRoute.geometry.coordinates) && selectedRoute.geometry.coordinates.length) {
+        const linePoints = selectedRoute.geometry.coordinates
+          .map((item) => Array.isArray(item) && item.length >= 2 ? [Number(item[1]), Number(item[0])] : null)
+          .filter(Boolean);
+        if (linePoints.length) {
+          adminDashboardRouteLine = L.polyline(linePoints, {
+            color: '#0f766e',
+            weight: 5,
+            opacity: 0.82,
+          }).addTo(map);
+        }
+
+        if (storeReady) {
+          adminDashboardStoreMarker = L.circleMarker([Number(storeOrigin.latitude), Number(storeOrigin.longitude)], {
+            radius: 9,
+            color: '#b45309',
+            weight: 2,
+            fillColor: '#f59e0b',
+            fillOpacity: 0.92,
+          }).addTo(map);
+          adminDashboardStoreMarker.bindPopup(
+            `<div class="space-y-1"><div class="text-sm font-semibold">${escapeHtml(storeOrigin.label || 'Loja')}</div><div class="text-xs text-slate-600">${escapeHtml(storeOrigin.address || 'Origem configurada no painel')}</div></div>`
+          );
+        }
+
+        if (Number.isFinite(Number(selectedRouteOrder.latitude)) && Number.isFinite(Number(selectedRouteOrder.longitude))) {
+          adminDashboardSelectedMarker = L.circleMarker([Number(selectedRouteOrder.latitude), Number(selectedRouteOrder.longitude)], {
+            radius: 10,
+            color: '#0f172a',
+            weight: 2,
+            fillColor: '#14b8a6',
+            fillOpacity: 0.95,
+          }).addTo(map);
+          adminDashboardSelectedMarker.bindPopup(
+            `<div class="space-y-1"><div class="text-sm font-semibold">Pedido ${escapeHtml(selectedRouteOrder.protocol || '')}</div><div class="text-xs text-slate-600">${escapeHtml(selectedRouteOrder.address || 'Endereco nao informado')}</div></div>`
+          );
+        }
+
+        const routeBounds = [];
+        if (adminDashboardRouteLine) routeBounds.push(...adminDashboardRouteLine.getLatLngs());
+        if (adminDashboardStoreMarker) routeBounds.push(adminDashboardStoreMarker.getLatLng());
+        if (adminDashboardSelectedMarker) routeBounds.push(adminDashboardSelectedMarker.getLatLng());
+        setDashboardMapEmptyState('');
+        if (routeBounds.length === 1) {
+          map.setView(routeBounds[0], 13);
+        } else if (routeBounds.length > 1) {
+          map.fitBounds(routeBounds, { padding: [32, 32] });
+        }
+        window.setTimeout(() => map.invalidateSize(), 80);
+        return;
+      }
+
+      const validPoints = Array.isArray(points) ? points.filter((item) => Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))) : [];
+      if (!validPoints.length) {
+        map.setView([-15.793889, -47.882778], 10);
+        setDashboardMapEmptyState(exactMode ? 'Sem pontos de entrega geocodificados para mostrar hoje.' : 'Sem regioes com coordenadas cadastradas para mostrar no mapa de hoje.');
+        window.setTimeout(() => map.invalidateSize(), 80);
+        return;
+      }
+
+      const bounds = [];
+      validPoints.forEach((item) => {
+        const orders = Math.max(1, Number(item.orders || 0));
+        const radius = exactMode ? 9 : Math.max(8, Math.min(26, 8 + (orders * 2.8)));
+        const marker = L.circleMarker([Number(item.lat), Number(item.lng)], {
+          radius,
+          color: exactMode ? '#0f766e' : '#312e81',
+          weight: 2,
+          fillColor: exactMode ? '#14b8a6' : '#6366f1',
+          fillOpacity: 0.72,
+        });
+        const popupTitle = exactMode
+          ? `Pedido ${escapeHtml(item.protocol || '')}`
+          : escapeHtml(item.region || 'Regiao');
+        const popupMeta = exactMode
+          ? `<div class="text-xs text-slate-600">${escapeHtml(item.region || 'Sem regiao')}</div><div class="text-xs text-slate-600">${escapeHtml(item.address || 'Endereco nao informado')}</div>`
+          : `<div class="text-xs text-slate-600">${formatInteger(item.orders)} pedido(s) • ${formatInteger(item.items)} item(ns)</div><div class="text-xs text-slate-600">Faturamento ${formatCurrency(item.revenue || 0)}</div>`;
+        marker.bindPopup(
+          `<div class="space-y-1">
+            <div class="text-sm font-semibold">${popupTitle}</div>
+            ${popupMeta}
+          </div>`
+        );
+        marker.addTo(map);
+        adminDashboardMapMarkers.push(marker);
+        bounds.push([Number(item.lat), Number(item.lng)]);
+      });
+
+      setDashboardMapEmptyState('');
+      if (bounds.length === 1) {
+        map.setView(bounds[0], 12);
+      } else {
+        map.fitBounds(bounds, { padding: [28, 28] });
+      }
+      window.setTimeout(() => map.invalidateSize(), 80);
+    }
+
+    function renderTopProducts(items) {
+      const host = document.getElementById('dashTopProductsList');
+      if (!host) return;
+      if (!Array.isArray(items) || !items.length) {
+        host.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Nenhuma peca vendida hoje ainda.</div>';
+        return;
+      }
+      host.innerHTML = items.map((item, index) => `
+        <div class="dashboard-list-row">
+          <div class="flex gap-3">
+            <span class="dashboard-rank-badge">${index + 1}</span>
+            <div class="space-y-1 min-w-0">
+              <p class="text-sm font-semibold text-slate-900 break-words">${escapeHtml(item.description || 'Produto sem descricao')}</p>
+              <p class="text-xs text-slate-500">${formatInteger(item.orders)} pedido(s) • ${formatCurrency(item.revenue || 0)}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-semibold text-slate-900">${formatInteger(item.qty)}</div>
+            <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500">unidades</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderTopRegions(items) {
+      const host = document.getElementById('dashTopRegionsList');
+      if (!host) return;
+      if (!Array.isArray(items) || !items.length) {
+        host.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Sem concentracao de regioes hoje.</div>';
+        return;
+      }
+      host.innerHTML = items.map((item, index) => `
+        <div class="dashboard-list-row">
+          <div class="flex gap-3">
+            <span class="dashboard-rank-badge">${index + 1}</span>
+            <div class="space-y-1 min-w-0">
+              <div class="flex flex-wrap gap-2 items-center">
+                <p class="text-sm font-semibold text-slate-900 break-words">${escapeHtml(item.region || 'Sem regiao')}</p>
+                ${item.is_pickup ? '<span class="dashboard-tag pickup">Retirada na loja</span>' : (item.has_coordinates ? '<span class="dashboard-tag">Com ponto no mapa</span>' : '<span class="dashboard-tag warn">Sem coordenada</span>')}
+              </div>
+              <p class="text-xs text-slate-500">${formatInteger(item.items)} item(ns) • ${formatCurrency(item.revenue || 0)}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-semibold text-slate-900">${formatInteger(item.orders)}</div>
+            <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500">pedidos</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAddressClusters(items) {
+      const host = document.getElementById('dashAddressClustersList');
+      if (!host) return;
+      if (!Array.isArray(items) || !items.length) {
+        host.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Nenhum endereco recorrente registrado hoje.</div>';
+        return;
+      }
+      host.innerHTML = items.map((item) => `
+        <div class="dashboard-list-row">
+          <div class="space-y-2 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="text-sm font-semibold text-slate-900 break-words">${escapeHtml(item.address || 'Endereco nao informado')}</p>
+              ${item.is_partial ? '<span class="dashboard-tag warn">Endereco parcial</span>' : ''}
+            </div>
+            <p class="text-xs text-slate-500">Regiao: ${escapeHtml(item.region || 'Sem regiao')} • ${formatCurrency(item.revenue || 0)}</p>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-semibold text-slate-900">${formatInteger(item.orders)}</div>
+            <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500">pedidos</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function updateRouteOrderStatus(protocol, status) {
+      if (!adminToken || !protocol || !status) return;
+      try {
+        const response = await fetch(buildAdminUrl(`/admin/orders/${encodeURIComponent(protocol)}/route-status`), {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ status }),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel atualizar a rota do pedido'));
+        const data = await response.json();
+        await loadDashboardMetrics();
+        setStatus(data.message || 'Status da rota atualizado.', 'ok');
+      } catch (error) {
+        setStatus(error.message || 'Falha ao atualizar status da rota.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    function selectRouteOrder(protocol) {
+      adminDashboardSelectedProtocol = String(protocol || '').trim();
+      if (adminDashboardMetrics) renderDashboardMetrics(adminDashboardMetrics);
+    }
+
+    function renderRouteOrders(items, storeOrigin) {
+      const host = document.getElementById('dashRouteOrdersList');
+      const focus = document.getElementById('dashRouteFocus');
+      if (!host || !focus) return;
+      if (!Array.isArray(items) || !items.length) {
+        host.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Nenhum pedido no roteiro de hoje.</div>';
+        focus.innerHTML = 'Assim que entrar um pedido com localizacao, a rota aparece aqui.';
+        adminDashboardSelectedProtocol = '';
+        return;
+      }
+
+      if (!items.some((item) => String(item.protocol || '') === adminDashboardSelectedProtocol)) {
+        const preferred = items.find((item) => item.route && item.route.status === 'ok') || items[0];
+        adminDashboardSelectedProtocol = String(preferred?.protocol || '');
+      }
+      const selected = items.find((item) => String(item.protocol || '') === adminDashboardSelectedProtocol) || items[0];
+
+      host.innerHTML = items.map((item) => {
+        const isActive = String(item.protocol || '') === String(adminDashboardSelectedProtocol || '');
+        const routeOk = item.route && item.route.status === 'ok';
+        const statusLabel = ROUTE_STATUS_LABELS[String(item.order_status || 'submitted')] || 'Pedido';
+        const locationLabel = item.location_status === 'resolved'
+          ? 'Localizacao confirmada'
+          : (item.location_status === 'pickup' ? 'Retirada na loja' : 'Sem localizacao exata');
+        const routeMeta = routeOk
+          ? `${formatDurationLabel(item.route.duration_seconds || 0)} • ${(Number(item.route.distance_meters || 0) / 1000).toFixed(1)} km`
+          : escapeHtml(item.location_message || item.route?.message || 'Rota indisponivel no momento.');
+        const nextAction = item.order_status === 'route_started'
+          ? `<button type="button" data-protocol="${escapeHtml(item.protocol || '')}" class="route-delivered-btn px-3 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 min-h-[40px]">Marcar entregue</button>`
+          : `<button type="button" data-protocol="${escapeHtml(item.protocol || '')}" class="route-start-btn px-3 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 min-h-[40px]" ${routeOk ? '' : 'disabled'}>Iniciar rota</button>`;
+        const secondaryAction = item.order_status === 'delivered'
+          ? `<button type="button" data-protocol="${escapeHtml(item.protocol || '')}" class="route-reset-btn px-3 py-2 rounded-lg bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 min-h-[40px]">Reabrir</button>`
+          : '';
+        return `
+          <div class="rounded-2xl border ${isActive ? 'border-indigo-400 bg-indigo-50/60' : 'border-slate-200 bg-white'} p-3 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <button type="button" data-protocol="${escapeHtml(item.protocol || '')}" class="route-select-btn text-left text-sm font-semibold text-slate-900 hover:text-indigo-700">${escapeHtml(`Pedido ${item.protocol || ''}`)}</button>
+                  <span class="dashboard-tag">${escapeHtml(statusLabel)}</span>
+                </div>
+                <p class="text-xs text-slate-500">${escapeHtml(item.region || 'Sem regiao')} • ${formatDateTimeLabel(item.created_at)}</p>
+                <p class="text-xs text-slate-600 break-words">${escapeHtml(item.address || 'Endereco nao informado')}</p>
+              </div>
+              <div class="text-right text-xs text-slate-500">
+                <div>${formatCurrency(item.order_total || 0)}</div>
+                <div>${escapeHtml(locationLabel)}</div>
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">${routeMeta}</div>
+            <div class="flex flex-col sm:flex-row gap-2">
+              ${nextAction}
+              ${secondaryAction}
+              ${routeOk ? `<a href="${escapeHtml(item.route.links?.google_maps || '#')}" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 min-h-[40px] inline-flex items-center justify-center">Abrir no mapa</a>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      Array.from(host.querySelectorAll('.route-select-btn')).forEach((button) => {
+        button.addEventListener('click', () => selectRouteOrder(button.dataset.protocol || ''));
+      });
+      Array.from(host.querySelectorAll('.route-start-btn')).forEach((button) => {
+        button.addEventListener('click', () => updateRouteOrderStatus(button.dataset.protocol || '', 'route_started'));
+      });
+      Array.from(host.querySelectorAll('.route-delivered-btn')).forEach((button) => {
+        button.addEventListener('click', () => updateRouteOrderStatus(button.dataset.protocol || '', 'delivered'));
+      });
+      Array.from(host.querySelectorAll('.route-reset-btn')).forEach((button) => {
+        button.addEventListener('click', () => updateRouteOrderStatus(button.dataset.protocol || '', 'submitted'));
+      });
+
+      if (!selected) {
+        focus.innerHTML = 'Selecione um pedido para abrir a rota da loja ate o cliente.';
+        return;
+      }
+
+      const routeOk = selected.route && selected.route.status === 'ok';
+      const routeSummary = routeOk
+        ? `${formatDurationLabel(selected.route.duration_seconds || 0)} • ${(Number(selected.route.distance_meters || 0) / 1000).toFixed(1)} km`
+        : 'Rota indisponivel';
+      const routeMessage = routeOk
+        ? escapeHtml(selected.route.summary || 'Trajeto calculado pelo OSRM.')
+        : escapeHtml(selected.location_message || selected.route?.message || 'Sem rota pronta para este pedido.');
+      const storeLabel = storeOrigin?.configured
+        ? `${escapeHtml(storeOrigin.label || 'Loja')} • ${escapeHtml(storeOrigin.address || 'Origem configurada')}`
+        : 'Configure a origem da rota nas configuracoes para calcular o trajeto automaticamente.';
+      const startedAt = Number(selected.route_started_at || 0) > 0 ? formatDateTimeLabel(selected.route_started_at) : 'Nao iniciada';
+      const deliveredAt = Number(selected.route_completed_at || 0) > 0 ? formatDateTimeLabel(selected.route_completed_at) : 'Pendente';
+      focus.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="dashboard-tag">${escapeHtml(`Pedido ${selected.protocol || ''}`)}</span>
+            <span class="dashboard-tag">${escapeHtml(ROUTE_STATUS_LABELS[String(selected.order_status || 'submitted')] || 'Pedido')}</span>
+            ${routeOk ? '<span class="dashboard-tag pickup">Rota pronta</span>' : '<span class="dashboard-tag warn">Sem rota pronta</span>'}
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Origem</p>
+              <p class="mt-1 font-semibold text-slate-900">${storeLabel}</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Destino</p>
+              <p class="mt-1 font-semibold text-slate-900">${escapeHtml(selected.address || 'Endereco nao informado')}</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Trajeto</p>
+              <p class="mt-1 font-semibold text-slate-900">${routeSummary}</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Rota iniciada</p>
+              <p class="mt-1 font-semibold text-slate-900">${escapeHtml(startedAt)}</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500">Entrega</p>
+              <p class="mt-1 font-semibold text-slate-900">${escapeHtml(deliveredAt)}</p>
+            </div>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600">${routeMessage}</div>
+        </div>
+      `;
+    }
+
+    function renderHourlyOrders(items) {
+      const host = document.getElementById('dashHourlyList');
+      if (!host) return;
+      const activeItems = Array.isArray(items) ? items.filter((item) => Number(item.orders || 0) > 0) : [];
+      if (!activeItems.length) {
+        host.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">Nenhum pedido registrado no dia para montar a curva horaria.</div>';
+        return;
+      }
+      const maxOrders = Math.max(...activeItems.map((item) => Number(item.orders || 0)), 1);
+      host.innerHTML = activeItems.map((item) => {
+        const width = Math.max(8, Math.round((Number(item.orders || 0) / maxOrders) * 100));
+        return `
+          <div class="dashboard-hour-row">
+            <span>${escapeHtml(item.label || '--:--')}</span>
+            <div class="dashboard-hour-track"><div class="dashboard-hour-fill" style="width:${width}%"></div></div>
+            <span class="text-right font-semibold text-slate-700">${formatInteger(item.orders)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderDashboardMetrics(data) {
+      adminDashboardMetrics = data || null;
+      const summary = data && typeof data.summary === 'object' ? data.summary : {};
+      const meta = data && typeof data.meta === 'object' ? data.meta : {};
+      const ignored = meta && typeof meta.ignored_orders === 'object' ? meta.ignored_orders : {};
+      const routeOrders = Array.isArray(data?.route_orders) ? data.route_orders : [];
+      const storeOrigin = data && typeof data.store_origin === 'object' ? data.store_origin : {};
+
+      document.getElementById('dashOrdersToday').textContent = formatInteger(summary.orders_today || 0);
+      document.getElementById('dashItemsSold').textContent = formatInteger(summary.items_sold || 0);
+      document.getElementById('dashRevenueToday').textContent = formatCurrency(summary.revenue || 0);
+      document.getElementById('dashAverageTicket').textContent = formatCurrency(summary.average_ticket || 0);
+      document.getElementById('dashAverageDeliveryFee').textContent = formatCurrency(summary.average_delivery_fee || 0);
+      document.getElementById('dashRegionsServed').textContent = formatInteger(summary.regions_served || 0);
+      document.getElementById('dashUpdatedAt').textContent = meta.generated_at
+        ? `Atualizado em ${formatDateTimeLabel(meta.generated_at)}`
+        : 'Leitura do dia carregada.';
+
+      const noticeParts = [];
+      if (Number(ignored.without_region || 0) > 0) noticeParts.push(`${formatInteger(ignored.without_region)} pedido(s) sem regiao informada`);
+      if (Number(ignored.without_address || 0) > 0) noticeParts.push(`${formatInteger(ignored.without_address)} pedido(s) sem endereco`);
+      if (Number(ignored.without_exact_location || 0) > 0) noticeParts.push(`${formatInteger(ignored.without_exact_location)} pedido(s) sem localizacao exata`);
+      if (!meta.store_origin_configured) noticeParts.push('Origem da rota da loja ainda nao configurada');
+      if (meta.delivery_location_error) noticeParts.push(`Localizacao: ${meta.delivery_location_error}`);
+      setDashboardNotice(noticeParts.length ? noticeParts.join(' • ') : '', noticeParts.length ? 'warn' : 'neutral');
+
+      renderTopProducts(Array.isArray(data.top_products) ? data.top_products : []);
+      renderTopRegions(Array.isArray(data.top_regions) ? data.top_regions : []);
+      renderAddressClusters(Array.isArray(data.address_clusters) ? data.address_clusters : []);
+      renderRouteOrders(routeOrders, storeOrigin);
+      renderHourlyOrders(Array.isArray(data.hourly_orders) ? data.hourly_orders : []);
+      const deliveryPoints = Array.isArray(data.delivery_points) ? data.delivery_points : [];
+      const selectedRouteOrder = getSelectedRouteOrder();
+      renderDashboardMap(
+        deliveryPoints.length ? deliveryPoints : (Array.isArray(data.map_points) ? data.map_points : []),
+        deliveryPoints.length > 0,
+        selectedRouteOrder,
+        storeOrigin,
+      );
+
+      if (!Number(summary.orders_today || 0)) {
+        setDashboardNotice('Ainda nao houve pedidos hoje. O painel continua pronto para leitura assim que entrarem novas vendas.', 'neutral');
+      }
+    }
+
+    async function loadDashboardMetrics(showStatus = false) {
+      if (!adminToken) return;
+      renderDashboardLoading();
+      try {
+        const response = await fetch(buildAdminUrl('/admin/dashboard/metrics', { period: 'today' }), {
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel carregar as metricas do dashboard'));
+        const data = await response.json();
+        renderDashboardMetrics(data);
+        if (showStatus) setStatus('Dashboard atualizado com sucesso.', 'ok');
+      } catch (error) {
+        renderDashboardError(error.message || 'Falha ao atualizar o dashboard.');
+        if (showStatus) setStatus(error.message || 'Falha ao atualizar o dashboard.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    function renderLocationStatus(status) {
+      adminLocationStatus = status || null;
+      const provider = document.getElementById('locationProvider');
+      const tableStatus = document.getElementById('locationTableStatus');
+      const totalRecords = document.getElementById('locationTotalRecords');
+      const message = document.getElementById('locationStatusMessage');
+      if (provider) provider.textContent = String(status?.provider || 'supabase_postgres');
+      if (tableStatus) tableStatus.textContent = status?.table_ready ? 'Pronta' : 'Pendente';
+      if (totalRecords) totalRecords.textContent = formatInteger(status?.total_records || 0);
+      if (message) message.textContent = buildLocationStatusText(status);
+    }
+
+    async function loadLocationStatus(showStatus = false) {
+      if (!adminToken) return;
+      try {
+        const response = await fetch(buildAdminUrl('/admin/location/status'), { headers: authHeaders() });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel consultar o status da localizacao'));
+        const data = await response.json();
+        renderLocationStatus(data);
+        if (showStatus) setStatus(data.message || 'Status de localizacao atualizado.', 'ok');
+      } catch (error) {
+        renderLocationStatus({
+          provider: 'supabase_postgres',
+          table_ready: false,
+          total_records: 0,
+          message: error.message || 'Falha ao carregar status de localizacao.',
+        });
+        if (showStatus) setStatus(error.message || 'Falha ao carregar status de localizacao.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function testLocationIntegration() {
+      if (!adminToken) return;
+      try {
+        const response = await fetch(buildAdminUrl('/admin/location/test'), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel testar a integracao de localizacao'));
+        const data = await response.json();
+        renderLocationStatus(data);
+        setStatus(data.message || 'Tabela de localizacao validada com sucesso.', 'ok');
+      } catch (error) {
+        setStatus(error.message || 'Falha ao testar a integracao de localizacao.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function syncTodayDeliveryLocations() {
+      if (!adminToken) return;
+      try {
+        const response = await fetch(buildAdminUrl('/admin/location/sync', { period: 'today' }), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel sincronizar as localizacoes de hoje'));
+        const data = await response.json();
+        await loadLocationStatus(false);
+        await loadDashboardMetrics();
+        setStatus(data.message || 'Entregas de hoje sincronizadas com sucesso.', 'ok');
+      } catch (error) {
+        setStatus(error.message || 'Falha ao sincronizar as localizacoes.', 'error');
+        if (String(error.message || '').toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
     }
 
     function sessionText() {
       if (!adminSession) return 'Sessao nao autenticada.';
-      return `Logado como ${adminSession.username} (${adminSession.role})`;
+      const selectedStoreId = String(adminSession.selected_store_id || adminSession.store_id || currentAdminStoreId || 'default');
+      return `Logado como ${adminSession.username} (${adminSession.role}) | Loja: ${selectedStoreId}`;
     }
 
     function renderAuthState() {
@@ -855,6 +1977,136 @@
       setUploadBusyState(uploadInFlight);
     }
 
+    function buildAdminUrl(path, params) {
+      const url = new URL(path, window.location.origin);
+      if (params instanceof URLSearchParams) {
+        params.forEach((value, key) => {
+          if (value === undefined || value === null || value === '') return;
+          url.searchParams.set(key, String(value));
+        });
+      } else if (params && typeof params === 'object') {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === '') return;
+          url.searchParams.set(key, String(value));
+        });
+      }
+      if (currentAdminStoreId && !url.searchParams.has('store')) url.searchParams.set('store', currentAdminStoreId);
+      return `${url.pathname}${url.search}`;
+    }
+
+    function formatDateTimeLabel(value) {
+      const numeric = Number(value || 0);
+      if (!numeric) return 'Nunca';
+      const date = new Date(numeric * 1000);
+      if (Number.isNaN(date.getTime())) return 'Nunca';
+      return date.toLocaleString('pt-BR');
+    }
+
+    function setCatalogReadOnlyState(isReadOnly) {
+      adminCatalogReadOnly = Boolean(isReadOnly);
+      const notice = document.getElementById('catalogReadonlyNotice');
+      if (notice) notice.classList.toggle('hidden', !adminCatalogReadOnly);
+
+      const pdfSection = document.getElementById('catalogPdfSection');
+      if (pdfSection) pdfSection.classList.toggle('opacity-60', adminCatalogReadOnly);
+
+      const createSection = document.getElementById('catalogCreateSection');
+      if (createSection) createSection.classList.toggle('hidden', adminCatalogReadOnly);
+
+      const dropzone = document.getElementById('pdfDropzone');
+      if (dropzone) {
+        dropzone.style.pointerEvents = adminCatalogReadOnly ? 'none' : 'auto';
+        dropzone.classList.toggle('cursor-not-allowed', adminCatalogReadOnly);
+      }
+
+      const uploadBtn = document.getElementById('uploadPdfBtn');
+      if (uploadBtn) uploadBtn.disabled = adminCatalogReadOnly || !adminToken || uploadInFlight;
+
+      const fileInput = document.getElementById('pdfInput');
+      if (fileInput) fileInput.disabled = adminCatalogReadOnly || uploadInFlight || !adminToken;
+    }
+
+    function renderIntegrationPendingOrders(items) {
+      const list = document.getElementById('integrationPendingOrdersList');
+      if (!list) return;
+      if (!Array.isArray(items) || !items.length) {
+        list.innerHTML = '<div class="border rounded-lg bg-white p-3">Nenhum pedido pendente.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      items.forEach((item) => {
+        const protocol = escapeHtml(item.protocol || '');
+        const message = escapeHtml(item.sync_message || '');
+        const lastError = escapeHtml(item.last_error || '');
+        const createdAt = formatDateTimeLabel(item.created_at);
+        const card = document.createElement('div');
+        card.className = 'border rounded-lg bg-white p-3 space-y-2';
+        card.dataset.protocol = String(item.protocol || '');
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p class="text-sm font-semibold text-slate-800">Pedido ${protocol}</p>
+              <p class="text-xs text-slate-500">Criado em ${createdAt} | Tentativas: ${escapeHtml(item.attempts || 0)}</p>
+            </div>
+            <button type="button" class="retry-order-btn px-3 py-2 text-xs bg-amber-500 text-slate-900 rounded hover:bg-amber-400 min-h-[36px]">Reenviar</button>
+          </div>
+          <p class="text-sm text-slate-700">${message || 'Pendente para sincronizacao.'}</p>
+          ${lastError ? `<p class="text-xs text-red-600">${lastError}</p>` : ''}
+        `;
+        const retryBtn = card.querySelector('.retry-order-btn');
+        if (retryBtn) retryBtn.addEventListener('click', () => retrySingleOrder(protocol));
+        list.appendChild(card);
+      });
+    }
+
+    function applyIntegrationConfig(cfg) {
+      document.getElementById('cfgIntegrationMode').value = cfg.integration_mode || 'local_json';
+      document.getElementById('cfgIntegrationDbEngine').value = cfg.integration_db_engine || '';
+      document.getElementById('cfgIntegrationDbHost').value = cfg.integration_db_host || '';
+      document.getElementById('cfgIntegrationDbPort').value = cfg.integration_db_port || '';
+      document.getElementById('cfgIntegrationDbName').value = cfg.integration_db_name || '';
+      document.getElementById('cfgIntegrationDbUser').value = cfg.integration_db_user || '';
+      document.getElementById('cfgIntegrationDbPassword').value = '';
+      document.getElementById('cfgIntegrationDbPath').value = cfg.integration_db_path || '';
+      document.getElementById('cfgIntegrationConnectionOptions').value = cfg.integration_connection_options || '';
+      document.getElementById('cfgIntegrationHealthcheckSql').value = cfg.integration_healthcheck_sql || 'SELECT 1';
+      document.getElementById('cfgIntegrationCatalogQuery').value = cfg.integration_catalog_query || '';
+      document.getElementById('cfgIntegrationOrderInsertSql').value = cfg.integration_order_insert_sql || '';
+      document.getElementById('cfgIntegrationStockUpdateSql').value = cfg.integration_stock_update_sql || '';
+      document.getElementById('cfgIntegrationOrderFinalizeSql').value = cfg.integration_order_finalize_sql || '';
+      document.getElementById('cfgLocationSupabaseDbUrl').value = '';
+
+      const passwordHint = document.getElementById('cfgIntegrationPasswordHint');
+      if (passwordHint) {
+        passwordHint.textContent = cfg.integration_db_password_configured
+          ? 'Senha salva no servidor. Preencha so para substituir.'
+          : 'Nenhuma senha salva.';
+      }
+      const locationHint = document.getElementById('cfgLocationSupabaseHint');
+      if (locationHint) {
+        locationHint.textContent = cfg.location_supabase_db_url_configured
+          ? 'Configurado no servidor. Preencha so para substituir.'
+          : 'Nao configurado.';
+      }
+
+      const statusBadge = document.getElementById('integrationStatusBadge');
+      if (statusBadge) statusBadge.textContent = cfg.integration_status || 'idle';
+      const healthcheck = document.getElementById('integrationLastHealthcheck');
+      if (healthcheck) healthcheck.textContent = formatDateTimeLabel(cfg.integration_last_healthcheck_at);
+      const catalogSync = document.getElementById('integrationLastCatalogSync');
+      if (catalogSync) catalogSync.textContent = formatDateTimeLabel(cfg.integration_last_catalog_sync_at);
+      const pendingJobs = document.getElementById('integrationPendingJobs');
+      if (pendingJobs) pendingJobs.textContent = String(cfg.integration_pending_jobs || 0);
+      const errorWrap = document.getElementById('integrationLastErrorWrap');
+      if (errorWrap) {
+        const errorText = String(cfg.integration_last_error || '').trim();
+        errorWrap.textContent = errorText;
+        errorWrap.classList.toggle('hidden', !errorText);
+      }
+      renderIntegrationPendingOrders(cfg.integration_pending_orders || []);
+      setCatalogReadOnlyState(Boolean(cfg.catalog_read_only));
+    }
+
     function authHeaders() {
       return {
         'Content-Type': 'application/json',
@@ -865,7 +2117,7 @@
     async function loadSession() {
       if (!adminToken) return false;
       try {
-        const response = await fetch('/admin/me', { headers: authHeaders() });
+        const response = await fetch(buildAdminUrl('/admin/me'), { headers: authHeaders() });
         if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
         if (!response.ok) throw new Error('Nao foi possivel validar sessao');
         adminSession = await response.json();
@@ -983,7 +2235,7 @@
       const formData = new FormData();
       formData.append('file', file, file.name);
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(buildAdminUrl(endpoint), {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}` },
         body: formData,
@@ -1040,6 +2292,10 @@
     }
 
     async function uploadNewProductImage() {
+      if (adminCatalogReadOnly) {
+        setStatus('Esta loja usa banco externo. O catalogo esta somente leitura.', 'error');
+        return;
+      }
       const fileInput = document.getElementById('newProductImageFile');
       const file = fileInput && fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
       if (!file) {
@@ -1074,7 +2330,7 @@
     }
 
     async function persistProductImage(productId, imageUrl) {
-      const response = await fetch(`/admin/products/${encodeURIComponent(productId)}`, {
+      const response = await fetch(buildAdminUrl(`/admin/products/${encodeURIComponent(productId)}`), {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({ image_url: String(imageUrl || '').trim() }),
@@ -1087,6 +2343,10 @@
     }
 
     async function uploadProductImageForCard(productId, card) {
+      if (adminCatalogReadOnly) {
+        setStatus('Esta loja usa banco externo. O catalogo esta somente leitura.', 'error');
+        return;
+      }
       if (!card) return;
       const fileInput = card.querySelector('.product-image-file');
       const file = fileInput && fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
@@ -1124,9 +2384,9 @@
       const uploadBtn = document.getElementById('uploadPdfBtn');
       const input = document.getElementById('pdfInput');
       const dropzone = document.getElementById('pdfDropzone');
-      const canUpload = Boolean(adminToken) && !isBusy;
+      const canUpload = Boolean(adminToken) && !isBusy && !adminCatalogReadOnly;
       if (uploadBtn) uploadBtn.disabled = !canUpload;
-      if (input) input.disabled = Boolean(isBusy) || !adminToken;
+      if (input) input.disabled = Boolean(isBusy) || !adminToken || adminCatalogReadOnly;
       if (dropzone) {
         dropzone.style.pointerEvents = canUpload ? 'auto' : 'none';
         dropzone.classList.toggle('opacity-70', !canUpload);
@@ -1165,7 +2425,7 @@
     }
 
     async function fetchUploadJobStatus(jobId) {
-      const response = await fetch(`/upload-pdf/status/${encodeURIComponent(jobId)}`, {
+      const response = await fetch(buildAdminUrl(`/upload-pdf/status/${encodeURIComponent(jobId)}`), {
         headers: { Authorization: `Bearer ${adminToken}` },
         cache: 'no-store',
       });
@@ -1233,6 +2493,10 @@
         setStatus('Faca login para enviar PDF.', 'error');
         return;
       }
+      if (adminCatalogReadOnly) {
+        setStatus('Esta loja usa banco externo. O catalogo esta somente leitura.', 'error');
+        return;
+      }
       if (!selectedPdfFile) {
         setStatus('Selecione um arquivo PDF antes de enviar.', 'error');
         return;
@@ -1248,7 +2512,7 @@
       try {
         let response = await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/upload-pdf');
+          xhr.open('POST', buildAdminUrl('/upload-pdf'));
           xhr.setRequestHeader('Authorization', `Bearer ${adminToken}`);
 
           xhr.upload.onprogress = (event) => {
@@ -1307,6 +2571,133 @@
 
     function formatFeeValue(value) {
       return parseFeeValue(value).toFixed(2);
+    }
+
+    function normalizePhoneDigits(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+
+    function parseWhatsappDestinationsText(text) {
+      const rows = [];
+      const seen = new Set();
+      const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+      lines.forEach((rawLine) => {
+        const line = String(rawLine || '').trim();
+        if (!line) return;
+        const match = line.match(/^(.*?)\s*(?:\||=|:)\s*(.+)$/);
+        if (!match) return;
+        const label = String(match[1] || '').trim();
+        const phone = normalizePhoneDigits(match[2]);
+        if (!label || !phone) return;
+        const key = label.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({ label, phone });
+      });
+      return rows.slice(0, MAX_WHATSAPP_DESTINATIONS);
+    }
+
+    function buildWhatsappDestinationRow(label = '', phone = '') {
+      const safeLabel = String(label || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const safePhone = String(phone || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const row = document.createElement('div');
+      row.className = 'whatsapp-destination-row grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-2';
+      row.innerHTML = `
+        <input type="text" class="whatsapp-destination-label w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Regiao, loja ou responsavel" value="${safeLabel}">
+        <input type="text" class="whatsapp-destination-phone w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="5561999999999" value="${safePhone}">
+        <button type="button" class="remove-whatsapp-destination-row px-3 py-2 text-sm text-red-600 border rounded hover:bg-red-50 min-h-[44px]">Remover</button>
+      `;
+      const removeBtn = row.querySelector('.remove-whatsapp-destination-row');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          row.remove();
+          updateWhatsappDestinationsUi();
+        });
+      }
+      const phoneInput = row.querySelector('.whatsapp-destination-phone');
+      if (phoneInput) {
+        phoneInput.addEventListener('input', () => {
+          phoneInput.value = normalizePhoneDigits(phoneInput.value);
+        });
+      }
+      return row;
+    }
+
+    function getWhatsappDestinationsListEl() {
+      return document.getElementById('cfgWhatsappDestinationsList');
+    }
+
+    function updateWhatsappDestinationsUi() {
+      const list = getWhatsappDestinationsListEl();
+      const addBtn = document.getElementById('addWhatsappDestinationBtn');
+      const hint = document.getElementById('cfgWhatsappDestinationsHint');
+      const total = list ? list.querySelectorAll('.whatsapp-destination-row').length : 0;
+      if (addBtn) addBtn.disabled = total >= MAX_WHATSAPP_DESTINATIONS;
+      if (addBtn) addBtn.classList.toggle('opacity-60', total >= MAX_WHATSAPP_DESTINATIONS);
+      if (hint) {
+        hint.textContent = `Maximo de ${MAX_WHATSAPP_DESTINATIONS} destinos. Se nao encontrar correspondencia, o sistema usa o WhatsApp padrao acima.`;
+      }
+    }
+
+    function renderWhatsappDestinationRows(rows) {
+      const list = getWhatsappDestinationsListEl();
+      if (!list) return;
+      list.innerHTML = '';
+      rows.slice(0, MAX_WHATSAPP_DESTINATIONS).forEach((entry) => {
+        list.appendChild(buildWhatsappDestinationRow(entry.label, entry.phone));
+      });
+      updateWhatsappDestinationsUi();
+    }
+
+    function addWhatsappDestinationRow(label = '', phone = '') {
+      const list = getWhatsappDestinationsListEl();
+      if (!list) return;
+      if (list.querySelectorAll('.whatsapp-destination-row').length >= MAX_WHATSAPP_DESTINATIONS) {
+        setStatus(`Voce pode cadastrar no maximo ${MAX_WHATSAPP_DESTINATIONS} destinos de WhatsApp.`, 'error');
+        updateWhatsappDestinationsUi();
+        return;
+      }
+      list.appendChild(buildWhatsappDestinationRow(label, phone));
+      updateWhatsappDestinationsUi();
+    }
+
+    function collectWhatsappDestinationRows() {
+      const list = getWhatsappDestinationsListEl();
+      if (!list) return [];
+      const rows = [];
+      const seen = new Set();
+      list.querySelectorAll('.whatsapp-destination-row').forEach((row) => {
+        const labelInput = row.querySelector('.whatsapp-destination-label');
+        const phoneInput = row.querySelector('.whatsapp-destination-phone');
+        const label = String(labelInput ? labelInput.value : '').trim();
+        const phone = normalizePhoneDigits(phoneInput ? phoneInput.value : '');
+        const hasLabel = Boolean(label);
+        const hasPhone = Boolean(phone);
+        if (!hasLabel && !hasPhone) return;
+        if (!hasLabel || !hasPhone) {
+          throw new Error('Preencha nome e numero em cada destino do WhatsApp ou remova a linha incompleta.');
+        }
+        const key = label.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({ label, phone });
+      });
+      if (rows.length > MAX_WHATSAPP_DESTINATIONS) {
+        throw new Error(`Voce pode cadastrar no maximo ${MAX_WHATSAPP_DESTINATIONS} destinos de WhatsApp.`);
+      }
+      return rows;
+    }
+
+    function serializeWhatsappDestinations(rows) {
+      return rows.map((entry) => `${entry.label}=${normalizePhoneDigits(entry.phone)}`).join('\n');
     }
 
     function parseDeliveryFeeRulesText(text) {
@@ -1425,6 +2816,85 @@
       return rows.map((entry) => `${entry.region}=${formatFeeValue(entry.fee)}`).join('\n');
     }
 
+    function getRegionMapPointsListEl() {
+      return document.getElementById('cfgRegionMapPointsList');
+    }
+
+    function parseRegionMapPointsText(text) {
+      const rows = [];
+      const seen = new Set();
+      String(text || '').replace(/\r\n/g, '\n').split('\n').forEach((rawLine) => {
+        const line = rawLine.trim();
+        if (!line) return;
+        const match = line.match(/^(.*?)\s*\|\s*(-?\d+(?:[.,]\d+)?)\s*\|\s*(-?\d+(?:[.,]\d+)?)$/);
+        if (!match) return;
+        const region = String(match[1] || '').trim();
+        const lat = String(match[2] || '').replace(',', '.').trim();
+        const lng = String(match[3] || '').replace(',', '.').trim();
+        const key = normalizeAdminText(region);
+        if (!region || !key || seen.has(key)) return;
+        seen.add(key);
+        rows.push({ region, lat, lng });
+      });
+      return rows;
+    }
+
+    function buildRegionMapPointRow(region = '', lat = '', lng = '') {
+      const row = document.createElement('div');
+      row.className = 'region-map-point-row grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_auto] gap-2';
+      row.innerHTML = `
+        <input type="text" class="region-map-name w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Regiao (ex: Ceilandia)" value="${escapeHtml(String(region || ''))}">
+        <input type="text" class="region-map-lat w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Latitude" value="${escapeHtml(String(lat || ''))}">
+        <input type="text" class="region-map-lng w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 min-h-[44px]" placeholder="Longitude" value="${escapeHtml(String(lng || ''))}">
+        <button type="button" class="remove-region-map-row px-3 py-2 text-sm text-red-600 border rounded hover:bg-red-50 min-h-[44px]">Remover</button>
+      `;
+      const removeBtn = row.querySelector('.remove-region-map-row');
+      if (removeBtn) removeBtn.addEventListener('click', () => row.remove());
+      return row;
+    }
+
+    function renderRegionMapPointRows(rows) {
+      const list = getRegionMapPointsListEl();
+      if (!list) return;
+      list.innerHTML = '';
+      const safeRows = Array.isArray(rows) ? rows : [];
+      if (!safeRows.length) {
+        list.appendChild(buildRegionMapPointRow('', '', ''));
+        return;
+      }
+      safeRows.forEach((entry) => {
+        list.appendChild(buildRegionMapPointRow(entry.region, entry.lat, entry.lng));
+      });
+    }
+
+    function addRegionMapPointRow() {
+      const list = getRegionMapPointsListEl();
+      if (!list) return;
+      list.appendChild(buildRegionMapPointRow('', '', ''));
+    }
+
+    function collectRegionMapPointRows() {
+      const list = getRegionMapPointsListEl();
+      if (!list) return [];
+      const rows = [];
+      const seen = new Set();
+      list.querySelectorAll('.region-map-point-row').forEach((row) => {
+        const region = String(row.querySelector('.region-map-name')?.value || '').trim();
+        const latRaw = String(row.querySelector('.region-map-lat')?.value || '').replace(',', '.').trim();
+        const lngRaw = String(row.querySelector('.region-map-lng')?.value || '').replace(',', '.').trim();
+        if (!region || !latRaw || !lngRaw) return;
+        const key = normalizeAdminText(region);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        rows.push({ region, lat: latRaw, lng: lngRaw });
+      });
+      return rows;
+    }
+
+    function serializeRegionMapPoints(rows) {
+      return rows.map((entry) => `${entry.region}|${String(entry.lat || '').replace(',', '.')}|${String(entry.lng || '').replace(',', '.')}`).join('\n');
+    }
+
     function applyConfigToForm(cfg) {
       document.getElementById('cfgStoreName').value = cfg.store_name || '';
       document.getElementById('cfgStoreTagline').value = cfg.store_tagline || '';
@@ -1440,13 +2910,23 @@
       document.getElementById('cfgThemeAccentDeep').value = cfg.theme_accent_deep || '';
       document.getElementById('cfgApiBaseUrl').value = cfg.api_base_url || '';
       document.getElementById('cfgWhatsapp').value = cfg.whatsapp_number || '';
+      renderWhatsappDestinationRows(parseWhatsappDestinationsText(cfg.whatsapp_destinations || ''));
       const parsedRules = parseDeliveryFeeRulesText(cfg.delivery_fee_rules || '');
       const fallbackRules = parseLegacyDeliveryFeeRows(cfg);
       renderDeliveryFeeRuleRows(parsedRules.length ? parsedRules : fallbackRules);
+      renderRegionMapPointRows(parseRegionMapPointsText(cfg.delivery_region_map_points || ''));
+      document.getElementById('cfgDeliveryGeoCity').value = cfg.delivery_geo_city || 'Brasilia';
+      document.getElementById('cfgDeliveryGeoState').value = cfg.delivery_geo_state || 'DF';
+      document.getElementById('cfgDeliveryGeoCountry').value = cfg.delivery_geo_country || 'Brasil';
+      document.getElementById('cfgDeliveryStoreLabel').value = cfg.delivery_store_label || 'Loja';
+      document.getElementById('cfgDeliveryStoreAddress').value = cfg.delivery_store_address || '';
+      document.getElementById('cfgDeliveryStoreLatitude').value = cfg.delivery_store_latitude || '';
+      document.getElementById('cfgDeliveryStoreLongitude').value = cfg.delivery_store_longitude || '';
       document.getElementById('cfgCouponTitle').value = cfg.coupon_title || '';
       document.getElementById('cfgCouponMessage').value = cfg.coupon_message || '';
       document.getElementById('cfgCouponAddress').value = cfg.coupon_address || '';
       document.getElementById('cfgCouponFooter').value = cfg.coupon_footer || '';
+      applyIntegrationConfig(cfg);
       renderStoreLogoPreview();
       updateThemeColorPreviews();
       refreshActiveThemePreset();
@@ -1454,7 +2934,9 @@
     }
 
     function collectConfigFromForm() {
+      const whatsappDestinations = collectWhatsappDestinationRows();
       const deliveryRows = collectDeliveryFeeRuleRows();
+      const regionMapPointRows = collectRegionMapPointRows();
       const rulesText = serializeDeliveryFeeRules(deliveryRows);
       const legacyAmount = deliveryRows.length ? formatFeeValue(deliveryRows[0].fee) : '0.00';
       const legacyRegions = deliveryRows.map((item) => item.region).join('\n');
@@ -1472,14 +2954,39 @@
         theme_accent_strong: document.getElementById('cfgThemeAccentStrong').value.trim(),
         theme_accent_deep: document.getElementById('cfgThemeAccentDeep').value.trim(),
         api_base_url: document.getElementById('cfgApiBaseUrl').value.trim(),
-        whatsapp_number: document.getElementById('cfgWhatsapp').value.trim(),
+        whatsapp_number: normalizePhoneDigits(document.getElementById('cfgWhatsapp').value.trim()),
+        whatsapp_destinations: serializeWhatsappDestinations(whatsappDestinations),
         delivery_fee_amount: legacyAmount,
         delivery_fee_regions: legacyRegions,
         delivery_fee_rules: rulesText,
+        delivery_region_map_points: serializeRegionMapPoints(regionMapPointRows),
+        delivery_geo_city: document.getElementById('cfgDeliveryGeoCity').value.trim(),
+        delivery_geo_state: document.getElementById('cfgDeliveryGeoState').value.trim(),
+        delivery_geo_country: document.getElementById('cfgDeliveryGeoCountry').value.trim(),
+        delivery_store_label: document.getElementById('cfgDeliveryStoreLabel').value.trim(),
+        delivery_store_address: document.getElementById('cfgDeliveryStoreAddress').value.trim(),
+        delivery_store_latitude: document.getElementById('cfgDeliveryStoreLatitude').value.trim(),
+        delivery_store_longitude: document.getElementById('cfgDeliveryStoreLongitude').value.trim(),
         coupon_title: document.getElementById('cfgCouponTitle').value.trim(),
         coupon_message: document.getElementById('cfgCouponMessage').value.trim(),
         coupon_address: document.getElementById('cfgCouponAddress').value.trim(),
         coupon_footer: document.getElementById('cfgCouponFooter').value.trim(),
+        integration_mode: document.getElementById('cfgIntegrationMode').value,
+        integration_connector_type: 'direct_sql',
+        integration_db_engine: document.getElementById('cfgIntegrationDbEngine').value,
+        integration_db_host: document.getElementById('cfgIntegrationDbHost').value.trim(),
+        integration_db_port: document.getElementById('cfgIntegrationDbPort').value.trim(),
+        integration_db_name: document.getElementById('cfgIntegrationDbName').value.trim(),
+        integration_db_user: document.getElementById('cfgIntegrationDbUser').value.trim(),
+        integration_db_password: document.getElementById('cfgIntegrationDbPassword').value,
+        integration_db_path: document.getElementById('cfgIntegrationDbPath').value.trim(),
+        integration_connection_options: document.getElementById('cfgIntegrationConnectionOptions').value.trim(),
+        integration_healthcheck_sql: document.getElementById('cfgIntegrationHealthcheckSql').value.trim(),
+        integration_catalog_query: document.getElementById('cfgIntegrationCatalogQuery').value.trim(),
+        integration_order_insert_sql: document.getElementById('cfgIntegrationOrderInsertSql').value.trim(),
+        integration_stock_update_sql: document.getElementById('cfgIntegrationStockUpdateSql').value.trim(),
+        integration_order_finalize_sql: document.getElementById('cfgIntegrationOrderFinalizeSql').value.trim(),
+        location_supabase_db_url: document.getElementById('cfgLocationSupabaseDbUrl').value.trim(),
       };
     }
 
@@ -1487,7 +2994,7 @@
       const username = document.getElementById('loginUser').value.trim();
       const password = document.getElementById('loginPassword').value;
       try {
-        const response = await fetch('/admin/login', {
+        const response = await fetch(buildAdminUrl('/admin/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
@@ -1498,7 +3005,9 @@
         adminToken = data.token;
         adminSession = {
           username: data.username || username,
-          role: data.role || 'admin',
+          role: data.role || 'master',
+          store_id: data.store_id || currentAdminStoreId || 'default',
+          selected_store_id: currentAdminStoreId || data.store_id || 'default',
         };
         sessionStorage.setItem('adminToken', adminToken);
         renderAuthState();
@@ -1512,11 +3021,14 @@
     function logoutAdmin(showStatus = true) {
       adminToken = '';
       adminSession = null;
+      adminDashboardMetrics = null;
+      adminLocationStatus = null;
       selectedPdfFile = null;
       productsAdminOffset = 0;
       productsAdminTotal = 0;
       sessionStorage.removeItem('adminToken');
       renderAuthState();
+      renderDashboardLoading();
       const listEl = document.getElementById('productsAdminList');
       if (listEl) listEl.innerHTML = '<div class="text-sm text-slate-500">Faca login para gerenciar produtos.</div>';
       if (showStatus) setStatus('Sessao encerrada.', 'neutral');
@@ -1525,12 +3037,14 @@
     async function loadConfig() {
       if (!adminToken) return;
       try {
-        const response = await fetch('/admin/config', { headers: authHeaders() });
+        const response = await fetch(buildAdminUrl('/admin/config'), { headers: authHeaders() });
         if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
         if (!response.ok) throw new Error('Nao foi possivel carregar configuracoes');
         const data = await response.json();
         applyConfigToForm(data);
         await loadAdminProducts(true);
+        await loadDashboardMetrics();
+        await loadLocationStatus(false);
         renderAuthState();
         setStatus('Configuracoes carregadas.', 'ok');
       } catch (error) {
@@ -1543,23 +3057,110 @@
 
     async function saveConfig() {
       if (!adminToken) return;
-      const payload = collectConfigFromForm();
       try {
-        const response = await fetch('/admin/config', {
+        const payload = collectConfigFromForm();
+        const response = await fetch(buildAdminUrl('/admin/config'), {
           method: 'PUT',
           headers: authHeaders(),
           body: JSON.stringify(payload),
         });
         if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
-        if (!response.ok) throw new Error('Nao foi possivel salvar configuracoes');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel salvar configuracoes'));
         const data = await response.json();
         applyConfigToForm(data.config || payload);
+        await loadDashboardMetrics();
+        await loadLocationStatus(false);
         setStatus('Configuracoes salvas.', 'ok');
       } catch (error) {
         setStatus(error.message, 'error');
         if (String(error.message).toLowerCase().includes('sessao')) {
           logoutAdmin(false);
         }
+      }
+    }
+
+    async function testIntegrationConnection() {
+      if (!adminToken) return;
+      try {
+        const response = await fetch(buildAdminUrl('/admin/integration/test'), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel testar a conexao'));
+        const data = await response.json();
+        if (data.config) applyConfigToForm(data.config);
+        setStatus(data.message || 'Conexao validada com sucesso.', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function syncIntegrationCatalog() {
+      if (!adminToken) return;
+      try {
+        const response = await fetch(buildAdminUrl('/admin/integration/sync'), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel sincronizar o catalogo'));
+        const data = await response.json();
+        if (data.config) applyConfigToForm(data.config);
+        await loadAdminProducts(true);
+        setStatus(data.message || 'Catalogo sincronizado.', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function loadIntegrationOrders() {
+      if (!adminToken) return;
+      try {
+        const response = await fetch(buildAdminUrl('/admin/orders', { sync_status: 'pending_retry', limit: 20 }), {
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel carregar pedidos pendentes'));
+        const data = await response.json();
+        renderIntegrationPendingOrders(Array.isArray(data.results) ? data.results : []);
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function retrySingleOrder(protocol) {
+      if (!adminToken || !protocol) return;
+      try {
+        const response = await fetch(buildAdminUrl(`/admin/orders/${encodeURIComponent(protocol)}/retry`), {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+        if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
+        if (!response.ok) throw new Error(await parseDetailMessage(response, 'Nao foi possivel reenviar o pedido'));
+        const data = await response.json();
+        if (data.config) applyConfigToForm(data.config);
+        await loadIntegrationOrders();
+        setStatus(data.message || `Pedido ${protocol} reprocessado.`, 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+        if (String(error.message).toLowerCase().includes('sessao')) logoutAdmin(false);
+      }
+    }
+
+    async function retryPendingOrders() {
+      const cards = document.querySelectorAll('#integrationPendingOrdersList [data-protocol]');
+      if (!cards.length) {
+        setStatus('Nao ha pedidos pendentes para reenviar.', 'neutral');
+        return;
+      }
+      for (const card of Array.from(cards)) {
+        const protocol = String(card.dataset.protocol || '').trim();
+        if (!protocol) continue;
+        await retrySingleOrder(protocol);
       }
     }
 
@@ -1676,6 +3277,7 @@
 
       listEl.innerHTML = '';
       items.forEach((item) => {
+        const disabledAttr = adminCatalogReadOnly ? 'disabled' : '';
         const id = escapeHtml(item.id);
         const desc = highlightTerms(item.description, terms);
         const unit = escapeHtml(item.unit || 'UN');
@@ -1693,35 +3295,35 @@
         card.innerHTML = `
           <div class="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
             <p class="text-xs text-slate-500 tracking-wide">CODIGO: <span class="font-semibold text-slate-700">${id}</span></p>
-            <button type="button" class="delete-product-btn px-3 py-1.5 text-xs text-red-600 border rounded hover:bg-red-50 min-h-[34px]">Excluir</button>
+            <button type="button" class="delete-product-btn px-3 py-1.5 text-xs text-red-600 border rounded hover:bg-red-50 min-h-[34px]" ${disabledAttr}>Excluir</button>
           </div>
           <p class="text-sm text-slate-800 leading-snug">${desc}</p>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
             <div>
               <label class="text-[11px] text-slate-500">Unidade</label>
-              <input type="text" class="product-unit p-2 border rounded w-full min-h-[40px]" value="${unit}" />
+              <input type="text" class="product-unit p-2 border rounded w-full min-h-[40px]" value="${unit}" ${disabledAttr} />
             </div>
             <div>
               <label class="text-[11px] text-slate-500">Preco a vista</label>
-              <input type="text" class="product-price-sight p-2 border rounded w-full min-h-[40px]" value="${priceSight}" />
+              <input type="text" class="product-price-sight p-2 border rounded w-full min-h-[40px]" value="${priceSight}" ${disabledAttr} />
             </div>
             <div>
               <label class="text-[11px] text-slate-500">Preco a prazo</label>
-              <input type="text" class="product-price-term p-2 border rounded w-full min-h-[40px]" value="${priceTerm}" />
+              <input type="text" class="product-price-term p-2 border rounded w-full min-h-[40px]" value="${priceTerm}" ${disabledAttr} />
             </div>
             <div>
               <label class="text-[11px] text-slate-500">Preco atacado</label>
-              <input type="text" class="product-price-wholesale p-2 border rounded w-full min-h-[40px]" value="${priceWholesale}" />
+              <input type="text" class="product-price-wholesale p-2 border rounded w-full min-h-[40px]" value="${priceWholesale}" ${disabledAttr} />
             </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-end">
             <div>
               <label class="text-[11px] text-slate-500">Descricao</label>
-              <input type="text" class="product-description p-2 border rounded w-full min-h-[40px]" value="${escapeHtml(item.description)}" />
+              <input type="text" class="product-description p-2 border rounded w-full min-h-[40px]" value="${escapeHtml(item.description)}" ${disabledAttr} />
             </div>
             <div>
               <label class="text-[11px] text-slate-500">Estoque</label>
-              <input type="number" min="0" class="product-stock p-2 border rounded w-full min-h-[40px]" value="${stock}" />
+              <input type="number" min="0" class="product-stock p-2 border rounded w-full min-h-[40px]" value="${stock}" ${disabledAttr} />
             </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-[84px_1fr] gap-2 items-start">
@@ -1732,13 +3334,13 @@
                 <input type="text" class="product-image-url p-2 border rounded w-full min-h-[40px] bg-slate-50 text-slate-600" value="${imageUrl}" readonly />
               </div>
               <div class="flex flex-col sm:flex-row gap-2">
-                <input type="file" class="product-image-file p-2 border rounded min-h-[40px] bg-white w-full" accept="image/png,image/jpeg,image/webp,image/gif" />
-                <button type="button" class="upload-product-image-btn px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]">Enviar foto</button>
+                <input type="file" class="product-image-file p-2 border rounded min-h-[40px] bg-white w-full" accept="image/png,image/jpeg,image/webp,image/gif" ${disabledAttr} />
+                <button type="button" class="upload-product-image-btn px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]" ${disabledAttr}>Enviar foto</button>
               </div>
             </div>
           </div>
           <div class="flex justify-end">
-            <button type="button" class="save-product-btn px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]">Salvar alteracoes</button>
+            <button type="button" class="save-product-btn px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 min-h-[40px]" ${disabledAttr}>Salvar alteracoes</button>
           </div>
         `;
 
@@ -1760,7 +3362,7 @@
         params.set('limit', String(productsAdminLimit));
         params.set('offset', String(productsAdminOffset));
 
-        const response = await fetch(`/admin/products?${params.toString()}`, { headers: authHeaders() });
+        const response = await fetch(buildAdminUrl('/admin/products', params), { headers: authHeaders() });
         if (response.status === 401) throw new Error('Sessao expirada. Faca login novamente.');
         if (!response.ok) {
           const detail = await parseDetailMessage(response, 'Nao foi possivel carregar produtos');
@@ -1788,6 +3390,10 @@
 
     async function createProduct() {
       if (!adminToken) return;
+      if (adminCatalogReadOnly) {
+        setStatus('Esta loja usa banco externo. O catalogo esta somente leitura.', 'error');
+        return;
+      }
       const payload = {
         id: document.getElementById('newProductId').value.trim(),
         description: document.getElementById('newProductDescription').value.trim(),
@@ -1805,7 +3411,7 @@
       }
 
       try {
-        const response = await fetch('/admin/products', {
+        const response = await fetch(buildAdminUrl('/admin/products'), {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify(payload),
@@ -1826,6 +3432,10 @@
 
     async function updateProduct(productId, card) {
       if (!adminToken || !card) return;
+      if (adminCatalogReadOnly) {
+        setStatus('Esta loja usa banco externo. O catalogo esta somente leitura.', 'error');
+        return;
+      }
       const payload = {
         description: String(card.querySelector('.product-description')?.value || '').trim(),
         unit: String(card.querySelector('.product-unit')?.value || 'UN').trim() || 'UN',
@@ -1842,7 +3452,7 @@
       }
 
       try {
-        const response = await fetch(`/admin/products/${encodeURIComponent(productId)}`, {
+        const response = await fetch(buildAdminUrl(`/admin/products/${encodeURIComponent(productId)}`), {
           method: 'PUT',
           headers: authHeaders(),
           body: JSON.stringify(payload),
@@ -1862,11 +3472,15 @@
 
     async function deleteProduct(productId) {
       if (!adminToken) return;
+      if (adminCatalogReadOnly) {
+        setStatus('Esta loja usa banco externo. O catalogo esta somente leitura.', 'error');
+        return;
+      }
       const confirmed = window.confirm(`Confirma excluir o produto ${productId}?`);
       if (!confirmed) return;
 
       try {
-        const response = await fetch(`/admin/products/${encodeURIComponent(productId)}`, {
+        const response = await fetch(buildAdminUrl(`/admin/products/${encodeURIComponent(productId)}`), {
           method: 'DELETE',
           headers: authHeaders(),
         });
@@ -1887,5 +3501,6 @@
       }
     }
   </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </body>
 </html>
