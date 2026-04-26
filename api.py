@@ -3186,6 +3186,11 @@ def read_manager():
     raise HTTPException(status_code=404, detail="Pagina nao encontrada")
 
 
+@app.get("/painel")
+def read_manager_panel():
+    return FileResponse("gerenciador.html", headers={"Cache-Control": "no-store"})
+
+
 @app.get(MANAGER_ENTRY_ROUTE)
 def read_manager_hidden():
     return FileResponse("gerenciador.html", headers={"Cache-Control": "no-store"})
